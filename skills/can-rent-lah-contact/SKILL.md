@@ -67,7 +67,7 @@ When the user picks a listing from rough-screening results, create `targets/<id>
 
 Update the status at the top of the file whenever it changes.
 
-## Phase 1: Extract agent contact info
+## Phase 1: Extract agent contact + WhatsApp link
 
 For each target listing, run:
 
@@ -75,9 +75,14 @@ For each target listing, run:
 opencli propertyguru contact <id> -f json
 ```
 
-This returns agent name, mobile number, CEA license, WhatsApp availability, and phone availability. Write this into the target file's Agent Contact section.
+This returns:
+- `agentName`, `agentMobile`, `ceaLicense` — agent details
+- **`whatsappUrl`** — ready-to-click WhatsApp link with a pre-filled message in English:
+  > "Hi Robin Phua, I'm interested in 308 Clementi Avenue 4 (S$ 2,500 /mo). Is it still available? When can I view? [listing URL]"
 
-If `hasWhatsapp: true`, the agent can be reached on WhatsApp. This is the preferred channel in Singapore — agents expect it.
+Write everything into the target file. The `whatsappUrl` is the primary action — user clicks and the conversation starts.
+
+WhatsApp is the preferred channel in Singapore. Agents expect it. No need for email or PropertyGuru's enquiry form.
 
 ## Phase 2: Identify information gaps
 
@@ -127,57 +132,32 @@ Add these as a checklist to the target file:
 
 Check them off as answers come in.
 
-## Phase 3: Draft the first message
+## Phase 3: Send the first message
 
-Generate a WhatsApp message for the agent. Use the contact info extracted earlier.
+The `contact` CLI already returns a ready-to-use WhatsApp URL with a pre-filled message. Present it to the user:
 
-### Message template (English)
+> Click to WhatsApp Robin Phua about 308 Clementi Avenue 4:
+> `https://wa.me/6584874492?text=...`
 
-```
-Hi <agent name>,
+The pre-filled message is a simple introduction. If the user wants to add specific questions, customize the message before sending.
 
-I'm interested in the <property type> at <address> (listed at S$<price>/mo).
+### Customizing the message
 
-Is it still available? When can I view?
-
-A few quick questions:
-- <question 1>
-- <question 2>
-
-Thanks!
-
-- <user name>
-```
-
-### Message template (Chinese, if the agent is Chinese-speaking)
+If the user has specific questions to add, generate a new WhatsApp URL:
 
 ```
-Hi <agent name>，
-
-我对 <address> 的 <property type> 感兴趣（S$<price>/mo）。
-
-还available吗？什么时候可以看房？
-
-几个问题：
-- <question 1>
-- <question 2>
-
-谢谢！
-
-- <user name>
+https://wa.me/<mobile>?text=<url-encoded custom message>
 ```
 
-### Sending the message
+Use the agent's mobile number from the `contact` command output.
 
-Once the user approves the draft, construct the WhatsApp URL:
+### Multi-listing strategy
 
-```
-https://wa.me/<mobile>?text=<url-encoded message>
-```
+If the same agent handles multiple listings the user is interested in, mention all in one message:
 
-Open it with `open` (macOS) or tell the user to click the link. The message opens in WhatsApp Web or the desktop app.
+> "Hi Robin, I'm interested in two of your listings: 308 Clementi Ave 4 ($2,500) and 306 Clementi Ave 4 ($2,800). Are either still available?"
 
-For multiple listings, draft one message per agent. If the same agent handles multiple listings the user is interested in, mention all of them in one message.
+This is more efficient and shows the agent you're a serious buyer.
 
 ## Phase 4: Track responses
 

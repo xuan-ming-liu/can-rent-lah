@@ -15,14 +15,14 @@ cli({
   site: 'propertyguru',
   name: 'contact',
   access: 'read',
-  description: 'Extract agent contact details from a listing — name, agency, WhatsApp template, phone availability.',
+  description: 'Extract agent contact and generate WhatsApp link for a listing.',
   domain: 'www.propertyguru.com.sg',
   strategy: Strategy.COOKIE,
   browser: true,
   args: [
     { name: 'id', type: 'string', positional: true, required: true, help: 'Listing ID (numeric) or full URL' },
   ],
-  columns: ['listingId', 'listingTitle', 'agentName', 'agentMobile', 'ceaLicense', 'hasWhatsapp', 'hasPhone', 'hasEnquiry', 'agentProfileUrl', 'listingUrl'],
+  columns: ['listingId', 'listingTitle', 'agentName', 'agentMobile', 'ceaLicense', 'whatsappUrl', 'listingUrl'],
   func: async (page, kwargs) => {
     const url = resolveListingUrl(kwargs.id);
     await page.goto(url, { settleMs: 2000 });
@@ -34,45 +34,42 @@ cli({
         if (!d) return { error: 'page did not load' };
 
         const card = d.contactAgentData?.contactAgentCard;
-        const agent = card?.agentInfoProps;
-        const actions = card?.contactActions || [];
-        const richActions = card?.richContactActions || [];
-
-        // Flatten rich actions to find all contact methods
+        const agentProps = card?.agentInfoProps?.agent;
         const allActions = [];
-        for (const act of richActions) {
-          if (act.groupLayout?.actions) {
-            allActions.push(...act.groupLayout.actions);
-          } else {
-            allActions.push(act);
-          }
+        for (const act of card?.richContactActions || []) {
+          if (act.groupLayout?.actions) allActions.push(...act.groupLayout.actions);
+          else allActions.push(act);
         }
 
         const hasWhatsapp = allActions.some(a => a.type === 'whatsapp');
-        const hasPhone = allActions.some(a => a.type === 'revealPhoneNumber' || a.type === 'phoneCall');
-        const hasEnquiry = allActions.some(a => a.type === 'sendEnquiry');
+        const mobile = hasWhatsapp ? (agentProps?.mobile || '') : '';
 
-        // Get WhatsApp template if available
-        const waAction = [...actions, ...allActions].find(a => a.type === 'whatsapp');
-        const waTemplate = waAction?.message || null;
+        // Extract monthly price from DOM (the detailItems PSF price is not the monthly rent)
+        const priceEl = document.querySelector('.amount, [class*="listing-price"] .amount');
+        const priceText = priceEl?.textContent?.trim() || '';
 
-        // Listing basic info from the page
-        const title = d.descriptionBlockData?.subtitle || '';
-        const detailItems = d.detailsData?.metatable?.items || [];
-        const priceItem = detailItems.find(i => i.value?.includes('S$'));
-        const price = priceItem?.value || '';
+        // Build WhatsApp message
+        const agentName = agentProps?.name || '';
+        const projectName = d.descriptionBlockData?.subtitle || '';
+        const listingUrl = window.location.href;
+
+        const msg = [
+          `Hi ${agentName},`,
+          '',
+          `I'm interested in ${projectName}${priceText ? ` (${priceText})` : ''}.`,
+          'Is it still available? When can I view?',
+          '',
+          listingUrl,
+        ].join('\n');
+
+        const whatsappUrl = mobile ? `https://wa.me/${mobile.replace(/^\+/, '')}?text=${encodeURIComponent(msg)}` : '';
 
         return {
-          agentName: agent?.agent?.name || '',
-          agentMobile: agent?.agent?.mobile || '',
-          ceaLicense: (agent?.agent?.description || '').replace(/<[^>]+>/g, '').trim(),
-          agentProfileUrl: agent?.agent?.profileUrl || '',
-          hasWhatsapp,
-          hasPhone,
-          hasEnquiry,
-          waTemplate,
-          listingTitle: title,
-          listingPrice: price,
+          agentName,
+          agentMobile: mobile,
+          ceaLicense: (agentProps?.description || '').replace(/<[^>]+>/g, '').trim(),
+          whatsappUrl,
+          listingTitle: projectName,
         };
       } catch (err) {
         return { error: err?.message || 'unknown error' };
@@ -87,10 +84,7 @@ cli({
       agentName: data.agentName,
       agentMobile: data.agentMobile,
       ceaLicense: data.ceaLicense,
-      hasWhatsapp: data.hasWhatsapp,
-      hasPhone: data.hasPhone,
-      hasEnquiry: data.hasEnquiry,
-      agentProfileUrl: data.agentProfileUrl ? `${BASE_URL}${data.agentProfileUrl}` : '',
+      whatsappUrl: data.whatsappUrl,
       listingUrl: url,
     }];
   },
