@@ -1,6 +1,6 @@
 # can-rent-lah-setup
 
-Guide the user through setting up opencli and registering the PropertyGuru CLI adapter.
+Guide the user through setting up opencli and installing the PropertyGuru CLI adapter.
 
 ## Prerequisites check
 
@@ -8,40 +8,51 @@ Before anything else, verify the user has the foundational pieces in place.
 
 ### 1. opencli installed
 
-Check if `opencli` is in PATH. If not, guide the user:
+Check if `opencli` is in PATH:
 
 ```bash
-npm install -g @jackwener/opencli
+which opencli || npm install -g @jackwener/opencli
 ```
 
 ### 2. opencli doctor — all green
 
-Run `opencli doctor` and confirm:
+Run `opencli doctor` and confirm all three are green:
 
 - Daemon: running
 - Extension: connected
 - At least one Chrome profile connected
 
-If the extension is not connected, tell the user to install the opencli Browser Bridge Chrome extension and link it.
+If the extension is not connected, guide the user to install the [opencli Browser Bridge](https://chromewebstore.google.com/detail/opencli/ildkmabpimmkaediidaifkhjpohdnifk) Chrome extension.
 
 ### 3. Chrome logged into PropertyGuru
 
-Ask the user to open Chrome, navigate to https://www.propertyguru.com.sg, and log in (or confirm they are already logged in).
+Ask the user to open Chrome, navigate to https://www.propertyguru.com.sg, and log in. PropertyGuru does NOT require login for searching — but having a logged-in session avoids Cloudflare challenges.
 
-### 4. Register the can-rent-lah CLI
+### 4. Install the PropertyGuru adapter
 
-The PropertyGuru CLI adapter lives in `<repo>/cli/propertyguru/`. Register it with opencli:
-
-```bash
-opencli external install <path-to-can-rent-lah>/cli/propertyguru
-```
-
-After registration, verify with:
+Copy the adapter into opencli's user CLI directory:
 
 ```bash
-opencli help | grep propertyguru
+mkdir -p ~/.opencli/clis/propertyguru
+cp <path-to-can-rent-lah>/cli/propertyguru/search.js ~/.opencli/clis/propertyguru/search.js
 ```
+
+Verify it registered:
+
+```bash
+opencli propertyguru --help
+```
+
+Should show the `search` command with its arguments.
+
+### 5. Quick smoke test
+
+```bash
+opencli propertyguru search "clementi" --max 3000 --bedrooms 2 --limit 3 -f json
+```
+
+If this returns JSON listings, everything is set up correctly.
 
 ## Once everything is green
 
-Confirm to the user: "Can already! You're ready to search. Try `/can-rent-lah-search` to start hunting."
+Confirm: "Can rent lah! Try `/can-rent-lah-search` to start hunting."
