@@ -10,11 +10,11 @@ Manage communication with agents for target properties. Help the user track what
 
 ## The target list
 
-Every property the user is serious about gets a file at `targets/<id>.md`. This is the single source of truth for that listing.
+Every property the user is serious about gets a file at `record/targets/<id>.md`. This is the single source of truth for that listing.
 
 ### Creating a target
 
-When the user picks a listing from rough-screening results, create `targets/<id>.md`:
+When the user picks a listing from rough-screening results, create `record/targets/<id>.md`:
 
 ```markdown
 # <title> — S$<price>/mo

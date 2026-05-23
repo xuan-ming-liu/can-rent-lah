@@ -92,7 +92,7 @@ Walk through the 7-step flow briefly:
 
 ## Phase 3: Generate profile doc
 
-After the interview, write a structured markdown file to `profile/<name>.md` in the repo root. This file is the single source of truth for this user's preferences.
+After the interview, write a structured markdown file to `record/profile/<name>.md` in the repo root. This file is the single source of truth for this user's preferences.
 
 ### Profile template
 
@@ -126,11 +126,11 @@ Last updated: <date>
 - <anything else from the conversation>
 ```
 
-Save to `<repo-root>/profile/<name-slug>.md`.
+Save to `<repo-root>/record/profile/<name-slug>.md`.
 
 ## Phase 4: Append to learning log
 
-After the session, append to `profile/log.md` in the repo root. This is **append-only** — never delete or rewrite.
+After the session, append to `record/profile/log.md` in the repo root. This is **append-only** — never delete or rewrite.
 
 ### Log entry template
 
@@ -160,7 +160,7 @@ If nothing to log (just browsing), write a single line: `## <YYYY-MM-DD> — Bro
 
 ### How to use the log
 
-At the start of every search session, read `profile/log.md` (last 100 lines). Look for:
+At the start of every search session, read `record/profile/log.md` (last 100 lines). Look for:
 1. Preferences that evolved (e.g. "started wanting condo, now open to HDB")
 2. Areas the user consistently liked or rejected
 3. Any unresolved questions from last session
@@ -171,6 +171,6 @@ Use these signals to make smarter suggestions without re-asking.
 
 - The profile is read-only reference. Update it only when the user explicitly says something changed ("I actually want condo now").
 - The log is append-only. Every session gets one entry minimum.
-- If `profile/` directory doesn't exist, create it.
-- If `profile/log.md` doesn't exist, create it with a `# Learning Log` header.
+- If `record/profile/` directory doesn't exist, create it.
+- If `record/profile/log.md` doesn't exist, create it with a `# Learning Log` header.
 - Do NOT dump the entire knowledge base on the user. Answer what they ask, mention what's relevant to their situation.

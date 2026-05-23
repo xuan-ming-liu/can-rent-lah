@@ -58,7 +58,7 @@ Four skills covering the full rental lifecycle. Works with Claude Code, Codex, C
 
 ### `/onboard` — Understand your needs
 
-The agent interviews you about your school, budget, timeline, and preferences. Explains Singapore rental concepts only when you need them (HDB vs Condo? Master room vs Common room?). Outputs a structured profile to `profile/<name>.md` so every future session remembers who you are.
+The agent interviews you about your school, budget, timeline, and preferences. Explains Singapore rental concepts only when you need them (HDB vs Condo? Master room vs Common room?). Outputs a structured profile to `record/profile/<name>.md` so every future session remembers who you are.
 
 ### `/rough-screening` — Find and rank properties
 
@@ -66,7 +66,7 @@ Reads your profile. Searches multiple areas. Evaluates every listing against you
 
 ### `/contact` — Communicate with agents
 
-Extracts agent contact details from listings. Generates clickable WhatsApp links with pre-filled messages in English. Manages a per-listing communication log at `targets/<id>.md` — status tracking, question checklists, viewing notes. Every conversation, nothing lost.
+Extracts agent contact details from listings. Generates clickable WhatsApp links with pre-filled messages in English. Manages a per-listing communication log at `record/targets/<id>.md` — status tracking, question checklists, viewing notes. Every conversation, nothing lost.
 
 ### `/check` — Review your contract before signing
 
@@ -78,7 +78,7 @@ Upload a TA or LOI. The agent extracts every clause and checks it against Singap
 | 🟡 Warning | Negotiate (deposit return timeline, repair responsibilities) |
 | 🟢 Pass | Standard practice |
 
-HDB-specific checks (MOP, foreigner quota, subletting approval). Condo-specific checks (MCST rules, facility access). Generates a structured report saved to `targets/<id>/contract-check.md`.
+HDB-specific checks (MOP, foreigner quota, subletting approval). Condo-specific checks (MCST rules, facility access). Generates a structured report saved to `record/targets/<id>/contract-check.md`.
 
 ## CLI Commands
 
@@ -133,8 +133,9 @@ PropertyGuru is a Next.js server-side rendered site. The CLI adapters navigate t
      │  read / write                    │  navigate, extract
      ▼                                  ▼
 ┌──────────┐                    ┌─────────────┐
-│ profile/ │                    │ PropertyGuru │
-│ targets/ │                    │   .com.sg    │
+│ record/  │                    │ PropertyGuru │
+│ profile  │                    │   .com.sg    │
+│ targets  │                    │              │
 └──────────┘                    └─────────────┘
 ```
 
@@ -152,8 +153,10 @@ can-rent-lah/
 │   ├── can-rent-lah-rough-screening/  # /rough-screening
 │   ├── can-rent-lah-contact/    # /contact
 │   └── can-rent-lah-check/      # /check
-├── profile/                 # user profiles (generated)
-└── targets/                 # per-listing tracking (generated)
+├── record/                  # user data (gitignored)
+│   ├── profile/             #   user profiles
+│   ├── targets/             #   per-listing tracking
+│   └── log.md               #   learning log
 ```
 
 ## FAQ

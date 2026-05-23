@@ -20,7 +20,7 @@ Read profile + log → Understand session goal → Search → Evaluate → Prese
 
 ### Read the profile
 
-Look for `profile/<name>.md` in the repo root. If multiple profiles exist, ask which one to use. Extract:
+Look for `record/profile/<name>.md` in the repo root. If multiple profiles exist, ask which one to use. Extract:
 - School & preferred areas
 - Budget (rent-only or all-in)
 - Bedrooms needed
@@ -30,7 +30,7 @@ Look for `profile/<name>.md` in the repo root. If multiple profiles exist, ask w
 
 ### Read the log
 
-Read the last 100 lines of `profile/log.md`. Look for:
+Read the last 100 lines of `record/profile/log.md`. Look for:
 - Areas they consistently liked or rejected
 - Price sensitivity signals ("too expensive", "can stretch to X")
 - Unresolved questions from last session
@@ -133,7 +133,7 @@ After showing results, offer:
 
 ## Phase 6: Append to log
 
-After the session, append to `profile/log.md`:
+After the session, append to `record/profile/log.md`:
 
 ```markdown
 ## <YYYY-MM-DD HH:MM> — Rough screening: <area>, <filters>

@@ -13,7 +13,7 @@ Review a rental contract (Tenancy Agreement / Letter of Intent) against Singapor
 
 Ask the user for:
 1. **The contract** — PDF, screenshot, or text paste
-2. **Which listing** — if it's for a target already in `targets/<id>.md`, read that first for context (price, property type, agent info)
+2. **Which listing** — if it's for a target already in `record/targets/<id>.md`, read that first for context (price, property type, agent info)
 
 If the user hasn't done `/onboard` yet, also ask about:
 - Student pass status (diplomatic clause needs this)
@@ -74,7 +74,7 @@ If this is a Letter of Intent (not the full TA yet):
 
 ## Phase 3: Cross-reference with listing info
 
-If the listing is in `targets/<id>.md`, cross-check the contract against what was advertised:
+If the listing is in `record/targets/<id>.md`, cross-check the contract against what was advertised:
 
 - [ ] **Rent amount matches** the listing
 - [ ] **Furnishing level matches** (if listing said "fully furnished", contract should say so)
@@ -83,7 +83,7 @@ If the listing is in `targets/<id>.md`, cross-check the contract against what wa
 
 ## Phase 4: Generate report
 
-Write the report to `targets/<id>/contract-check.md` (if target exists) or `profile/contract-check-<date>.md` (if standalone).
+Write the report to `record/targets/<id>/contract-check.md` (if target exists) or `record/profile/contract-check-<date>.md` (if standalone).
 
 ### Report template
 
