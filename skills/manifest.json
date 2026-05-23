@@ -1,11 +1,15 @@
 {
   "skills": [
     {
-      "name": "can-rent-lah-setup",
+      "name": "onboard",
+      "path": "can-rent-lah-onboard/SKILL.md"
+    },
+    {
+      "name": "setup",
       "path": "can-rent-lah-setup/SKILL.md"
     },
     {
-      "name": "can-rent-lah-search",
+      "name": "search",
       "path": "can-rent-lah-search/SKILL.md"
     }
   ]
