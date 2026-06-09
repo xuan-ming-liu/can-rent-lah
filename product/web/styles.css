@@ -325,7 +325,7 @@ textarea {
 }
 
 /* --------------------------------------------------------------------------
-   Side Panel
+   Side Panel — Flow Guide
    -------------------------------------------------------------------------- */
 
 .side-panel,
@@ -355,58 +355,153 @@ textarea {
 .side-panel h2,
 .listings-sidebar h2 {
   font-size: var(--font-size-lg);
+  margin-bottom: var(--space-5);
 }
 
-/* Steps */
-.steps {
-  list-style: none;
-  padding: 0;
-  margin: var(--space-5) 0 var(--space-6);
+/* ── Step cards v2 ── */
+
+.steps-v2 {
   display: grid;
-  gap: var(--space-4);
+  gap: 0;
 }
 
-.steps li {
-  display: grid;
-  grid-template-columns: 28px 1fr;
+.step-v2 {
+  display: flex;
   gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-  align-items: start;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
-.steps span {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full);
+.step-v2:hover {
+  background: hsl(0, 0%, 100%);
+}
+
+.step-v2-icon {
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  color: var(--color-brand-600);
-  background: var(--color-brand-100);
-  font-weight: var(--font-weight-black);
-  font-size: var(--font-size-xs);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-50);
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-/* Note box */
-.note-box {
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--surface-card);
+.step-v2-body {
+  flex: 1;
+  min-width: 0;
 }
 
-.note-box strong {
+.step-v2-body strong {
+  display: block;
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
 
-.note-box p {
-  margin: var(--space-2) 0 0;
+.step-v2-body p {
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+.step-v2-body code {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  background: var(--color-brand-50);
+  color: var(--color-brand-600);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+/* ── Arrow between steps ── */
+
+.step-v2-arrow {
+  display: grid;
+  place-items: center;
+  padding: var(--space-1) 0 var(--space-1) 44px;
+  color: var(--border-strong);
+  font-size: var(--font-size-sm);
+  user-select: none;
+}
+
+/* ── Sidebar divider ── */
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-5) 0;
+}
+
+/* ── Tip box ── */
+
+.tip-box {
+  padding: var(--space-4);
+  border: 1px solid hsl(200, 40%, 82%);
+  border-radius: var(--radius-xl);
+  background: hsl(200, 50%, 96%);
+}
+
+.tip-box strong {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: hsl(202, 52%, 30%);
+  margin-bottom: var(--space-2);
+}
+
+.tip-box ul {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tip-box li {
+  font-size: var(--font-size-xs);
+  color: hsl(200, 30%, 34%);
+  line-height: var(--line-height-relaxed);
+}
+
+.tip-box em {
+  font-style: normal;
+  font-weight: var(--font-weight-bold);
+  background: hsl(200, 35%, 84%);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Note box v2 ── */
+
+.note-box-v2 {
+  padding: var(--space-4);
+  border: 1px solid hsl(40, 45%, 80%);
+  border-radius: var(--radius-xl);
+  background: hsl(42, 60%, 96%);
+}
+
+.note-box-v2 strong {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-warning-700);
+  margin-bottom: var(--space-2);
+}
+
+.note-box-v2 p {
+  margin: 0;
+  color: hsl(38, 25%, 34%);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-relaxed);
 }
+
+/* (keep old classes for backward compatibility) */
+.steps { display: none; }
+.note-box { display: none; }
 
 /* --------------------------------------------------------------------------
    Chat Panel
