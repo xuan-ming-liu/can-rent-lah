@@ -447,7 +447,11 @@ async function handleChatMessage(message) {
       const task = data.task;
       state.activeTaskId = task.id;
       const round = task.rounds?.[0] || {};
-      addMessage('assistant', `任务已创建。\n\n- 搜索策略：${round.strategy || '自动搜索'}\n- 搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n我会打开 PropertyGuru，插件会在浏览器里继续执行。`);
+      const searchUrl = task.intent?.location
+        ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? `&maxprice=${task.intent.maxPrice}` : ''}`
+        : 'https://www.propertyguru.com.sg/property-for-rent';
+
+      addMessage('assistant', `任务已创建。\n\n- 搜索策略：${round.strategy || '自动搜索'}\n- 搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n<a class="msg-action" href="${searchUrl}" target="_blank" rel="noreferrer">打开 PropertyGuru 搜索页面</a>\n\n插件会自动翻页采集。不小心关了页面就点上面按钮重新打开。`);
       const target = task.intent?.location
         ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? `&maxprice=${task.intent.maxPrice}` : ''}`
         : 'https://www.propertyguru.com.sg/property-for-rent';
