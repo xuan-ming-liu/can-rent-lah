@@ -6,41 +6,38 @@ const state = {
   user: null,
   listings: [],
   activeTaskId: null,
-  lastTaskResult: null, // store last task listing data for save buttons
+  lastTaskResult: null,
+  conversationLog: [],
 };
 
-// DOM
-const authScreen = document.querySelector('#authScreen');
-const mainScreen = document.querySelector('#mainScreen');
-const accountBadge = document.querySelector('#accountBadge');
-const loginForm = document.querySelector('#loginForm');
-const emailInput = document.querySelector('#emailInput');
-const passwordInput = document.querySelector('#passwordInput');
-const loginError = document.querySelector('#loginError');
-const chatLog = document.querySelector('#chatLog');
-const chatForm = document.querySelector('#chatForm');
-const chatInput = document.querySelector('#chatInput');
-const listingGrid = document.querySelector('#listingGrid');
-const logoutBtn = document.querySelector('#logoutBtn');
-const settingsBtn = document.querySelector('#settingsBtn');
-const settingsModal = document.querySelector('#settingsModal');
-const closeSettingsBtn = document.querySelector('#closeSettingsBtn');
-const settingsInfo = document.querySelector('#settingsInfo');
-const passwordForm = document.querySelector('#passwordForm');
-const passwordMsg = document.querySelector('#passwordMsg');
-const profileForm = document.querySelector('#profileForm');
-const profileMsg = document.querySelector('#profileMsg');
-const profileSchool = document.querySelector('#profileSchool');
-const profileBudget = document.querySelector('#profileBudget');
-const profileType = document.querySelector('#profileType');
-const profileAreas = document.querySelector('#profileAreas');
-const profileDealbreakers = document.querySelector('#profileDealbreakers');
+const $ = (selector) => document.querySelector(selector);
+const authScreen = $('#authScreen');
+const mainScreen = $('#mainScreen');
+const accountBadge = $('#accountBadge');
+const loginForm = $('#loginForm');
+const emailInput = $('#emailInput');
+const passwordInput = $('#passwordInput');
+const loginError = $('#loginError');
+const chatLog = $('#chatLog');
+const chatForm = $('#chatForm');
+const chatInput = $('#chatInput');
+const listingGrid = $('#listingGrid');
+const logoutBtn = $('#logoutBtn');
+const settingsBtn = $('#settingsBtn');
+const settingsModal = $('#settingsModal');
+const closeSettingsBtn = $('#closeSettingsBtn');
+const settingsInfo = $('#settingsInfo');
+const passwordForm = $('#passwordForm');
+const passwordMsg = $('#passwordMsg');
+const profileForm = $('#profileForm');
+const profileMsg = $('#profileMsg');
+const profileSchool = $('#profileSchool');
+const profileBudget = $('#profileBudget');
+const profileType = $('#profileType');
+const profileAreas = $('#profileAreas');
+const profileDealbreakers = $('#profileDealbreakers');
 
-// ---------------------------------------------------------------------------
-// API
-// ---------------------------------------------------------------------------
-
-function headers() {
+function authHeaders() {
   return {
     'Content-Type': 'application/json',
     Authorization: state.token ? `Bearer ${state.token}` : '',
@@ -50,7 +47,7 @@ function headers() {
 async function api(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: { ...headers(), ...(options.headers || {}) },
+    headers: { ...authHeaders(), ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || '请求失败');
@@ -63,105 +60,23 @@ function setToken(token) {
   window.postMessage({ source: 'can-rent-lah-web', token }, window.location.origin);
 }
 
-// ---------------------------------------------------------------------------
-// UI
-// ---------------------------------------------------------------------------
-
-function showLoginError(msg) {
-  if (!msg) { loginError.classList.add('hidden'); loginError.textContent = ''; return; }
-  loginError.textContent = msg;
-  loginError.classList.remove('hidden');
-}
-
 function showScreen(loggedIn) {
   authScreen.classList.toggle('hidden', loggedIn);
   mainScreen.classList.toggle('hidden', !loggedIn);
 }
 
+function showError(text) {
+  loginError.textContent = text || '';
+  loginError.classList.toggle('hidden', !text);
+}
+
 function escapeHtml(value) {
-  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-}
-
-// ---------------------------------------------------------------------------
-// Chat
-// ---------------------------------------------------------------------------
-
-function addMessage(role, text) {
-  const el = document.createElement('div');
-  el.className = `message ${role}`;
-  if (role === 'assistant') {
-    el.innerHTML = renderMarkdown(text);
-    // Add save buttons with listing data + AI analysis extracted from report
-    const ranked = state.lastTaskResult?.rankedListings || [];
-    const reportText = state.lastTaskResult?.report || '';
-
-    el.querySelectorAll('a[href*="propertyguru.com.sg/listing"]').forEach((a, idx) => {
-      let listing = ranked[idx];
-      if (!listing) listing = ranked.find((l) => l.url && a.href.includes(String(l.id)));
-      if (!listing) return;
-
-      // Find this listing's section in the report markdown by URL
-      const listingId = String(listing.id || '');
-      const urlSlug = listing.url ? listing.url.split('/').pop() : '';
-      const reportLines = reportText.split('\n');
-      let sectionStart = -1;
-      let sectionEnd = reportLines.length;
-
-      // Find the section that contains this listing's URL or ID
-      for (let i = 0; i < reportLines.length; i++) {
-        if (reportLines[i].includes(urlSlug) || reportLines[i].includes(listingId)) {
-          // Go back to find the heading that starts this section
-          for (let j = i; j >= 0; j--) {
-            if (reportLines[j].match(/^#{2,4}\s/)) { sectionStart = j; break; }
-          }
-          // Go forward to find the next heading (start of next section)
-          for (let j = i + 1; j < reportLines.length; j++) {
-            if (reportLines[j].match(/^#{2,4}\s/)) { sectionEnd = j; break; }
-          }
-          break;
-        }
-      }
-
-      if (sectionStart >= 0) {
-        const section = reportLines.slice(sectionStart, sectionEnd).join('\n');
-        const pros = section.match(/为什么选它\**\s*[：:]\s*(.+?)(?=\n[-*]\s*\*\*要注意|\n[-*]\s*\*\*|\n\n|$)/s);
-        const cons = section.match(/要注意\**\s*[：:]\s*(.+?)(?=\n[-*]\s*\*\*|🔗|\n\n|$)/s);
-        if (pros) listing = { ...listing, _pros: pros[1].trim().slice(0, 100) };
-        if (cons) listing = { ...listing, _cons: cons[1].trim().slice(0, 100) };
-      }
-
-      const btn = document.createElement('button');
-      btn.className = 'save-btn';
-      btn.textContent = '收藏';
-      btn.dataset.listing = JSON.stringify(listing);
-      a.after(btn);
-    });
-  } else if (role === 'system') {
-    el.innerHTML = text;
-  } else {
-    el.textContent = text;
-  }
-  chatLog.append(el);
-  chatLog.scrollTop = chatLog.scrollHeight;
-  return el;
-}
-
-function renderMarkdown(md) {
-  const lines = String(md || '').split(/\r?\n/);
-  const html = [];
-  let inList = false;
-  function closeList() { if (inList) { html.push('</ul>'); inList = false; } }
-  for (let line of lines) {
-    line = line.trimEnd();
-    if (!line.trim()) { closeList(); continue; }
-    const h = line.match(/^(#{1,3})\s+(.+)$/);
-    if (h) { closeList(); html.push(`<h${h[1].length + 2}>${formatInline(h[2])}</h${h[1].length + 2}>`); continue; }
-    const bullet = line.match(/^[-*]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
-    if (bullet) { if (!inList) { html.push('<ul>'); inList = true; } html.push(`<li>${formatInline(bullet[1])}</li>`); continue; }
-    closeList(); html.push(`<p>${formatInline(line)}</p>`);
-  }
-  closeList();
-  return html.join('');
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function formatInline(text) {
@@ -171,193 +86,179 @@ function formatInline(text) {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
 }
 
-// ---------------------------------------------------------------------------
-// Listings
-// ---------------------------------------------------------------------------
+function renderMarkdown(markdown) {
+  const lines = String(markdown || '').split(/\r?\n/);
+  const html = [];
+  let inList = false;
+  const closeList = () => { if (inList) { html.push('</ul>'); inList = false; } };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { closeList(); continue; }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      closeList();
+      const level = Math.min(heading[1].length + 2, 4);
+      html.push(`<h${level}>${formatInline(heading[2])}</h${level}>`);
+      continue;
+    }
+    const bullet = line.match(/^[-*]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
+    if (bullet) {
+      if (!inList) { html.push('<ul>'); inList = true; }
+      html.push(`<li>${formatInline(bullet[1])}</li>`);
+      continue;
+    }
+    closeList();
+    html.push(`<p>${formatInline(line)}</p>`);
+  }
+  closeList();
+  return html.join('');
+}
+
+function addMessage(role, text) {
+  const item = document.createElement('div');
+  item.className = `message ${role}`;
+  if (role === 'assistant') {
+    item.innerHTML = renderMarkdown(text);
+    attachSaveButtons(item);
+  } else if (role === 'system') {
+    item.innerHTML = text;
+  } else {
+    item.textContent = text;
+  }
+  chatLog.append(item);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return item;
+}
+
+function attachSaveButtons(container) {
+  const ranked = state.lastTaskResult?.rankedListings || [];
+  container.querySelectorAll('a[href*="propertyguru.com.sg"]').forEach((link, index) => {
+    const listing = ranked[index] || ranked.find((item) => item.url && link.href.includes(String(item.id || '')));
+    if (!listing) return;
+    const button = document.createElement('button');
+    button.className = 'save-btn';
+    button.type = 'button';
+    button.textContent = '收藏这个房源';
+    button.dataset.listing = JSON.stringify(listing);
+    link.after(document.createTextNode(' '), button);
+  });
+}
+
+function emptyListingsHtml() {
+  return '<div class="empty-state">还没有收藏房源。<br>搜索完成后，在推荐结果里点“收藏这个房源”。</div>';
+}
 
 function renderListings() {
-  if (state.listings.length === 0) {
-    listingGrid.innerHTML = '<div class="subtle" style="padding:20px;text-align:center">还没有收藏房源。<br>Agent 推荐后可以收藏到这里。</div>';
+  if (!state.listings.length) {
+    listingGrid.innerHTML = emptyListingsHtml();
     return;
   }
-  listingGrid.innerHTML = state.listings.map((l) => `
+
+  listingGrid.innerHTML = state.listings.map((listing) => `
     <article class="listing-card">
       <div class="listing-card-head">
-        <strong>${escapeHtml(l.title || '无标题')}</strong>
-        <button class="delete-btn" data-id="${escapeHtml(l.id)}" title="删除">✕</button>
+        <strong>${escapeHtml(listing.title || '未命名房源')}</strong>
+        <button class="delete-btn" data-id="${escapeHtml(listing.id)}" type="button" title="删除">×</button>
       </div>
       <div class="listing-card-info">
-        ${l.price ? `<span class="listing-price">${escapeHtml(l.price)}</span>` : ''}
-        ${l.address ? `<span>📍 ${escapeHtml(l.address)}</span>` : ''}
-        ${l.mrt ? `<span>🚇 ${escapeHtml(l.mrt)}</span>` : ''}
-        ${l.floor_area ? `<span>📐 ${escapeHtml(l.floor_area)}</span>` : ''}
-        ${l.property_type ? `<span>🏠 ${escapeHtml(l.property_type)}</span>` : ''}
-        ${l.pros ? `<span class="listing-pros">👍 ${escapeHtml(l.pros)}</span>` : ''}
-        ${l.cons ? `<span class="listing-cons">⚠️ ${escapeHtml(l.cons)}</span>` : ''}
+        ${listing.price ? `<span class="listing-price">${escapeHtml(listing.price)}</span>` : ''}
+        ${listing.address ? `<span>${escapeHtml(listing.address)}</span>` : ''}
+        ${listing.mrt ? `<span>${escapeHtml(listing.mrt)}</span>` : ''}
+        ${listing.floor_area || listing.floorArea ? `<span>${escapeHtml(listing.floor_area || listing.floorArea)}</span>` : ''}
+        ${listing.property_type || listing.propertyType ? `<span>${escapeHtml(listing.property_type || listing.propertyType)}</span>` : ''}
       </div>
+      ${listing.pros ? `<div class="listing-pros">推荐理由：${escapeHtml(listing.pros)}</div>` : ''}
+      ${listing.cons ? `<div class="listing-cons">注意事项：${escapeHtml(listing.cons)}</div>` : ''}
       <div class="listing-card-actions">
-        ${l.url ? `<a href="${escapeHtml(l.url)}" target="_blank" rel="noreferrer" class="listing-link">🔗 查看</a>` : ''}
-        <button class="contact-btn" data-title="${escapeHtml(l.title || '')}" data-price="${escapeHtml(l.price || '')}" data-address="${escapeHtml(l.address || '')}" data-mrt="${escapeHtml(l.mrt || '')}" data-url="${escapeHtml(l.url || '')}">📞 联系中介</button>
+        ${listing.url ? `<a class="listing-link" href="${escapeHtml(listing.url)}" target="_blank" rel="noreferrer">查看原房源</a>` : ''}
+        <button class="contact-btn" type="button"
+          data-title="${escapeHtml(listing.title || '')}"
+          data-price="${escapeHtml(listing.price || '')}"
+          data-address="${escapeHtml(listing.address || '')}"
+          data-mrt="${escapeHtml(listing.mrt || '')}"
+          data-url="${escapeHtml(listing.url || '')}">生成联系话术</button>
       </div>
     </article>
   `).join('');
-
-  // Delete handlers
-  listingGrid.querySelectorAll('.delete-btn').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.id;
-      try {
-        await api(`/api/listings/${id}`, { method: 'DELETE' });
-        state.listings = state.listings.filter((l) => l.id !== id);
-        renderListings();
-      } catch { /* ignore */ }
-    });
-  });
-
-  // Contact agent handlers
-  listingGrid.querySelectorAll('.contact-btn').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const listing = {
-        title: btn.dataset.title,
-        price: btn.dataset.price,
-        address: btn.dataset.address,
-        mrt: btn.dataset.mrt,
-        url: btn.dataset.url,
-      };
-      btn.textContent = '生成中...';
-      btn.disabled = true;
-      try {
-        const data = await api('/api/contact/message', { method: 'POST', body: JSON.stringify({ listing }) });
-        addMessage('assistant', `**联系中介话术**\n\n\`\`\`\n${data.message}\n\`\`\`\n\n💡 复制上面的消息，WhatsApp 发给中介。`);
-      } catch {
-        addMessage('system', '生成话术失败');
-      } finally {
-        btn.textContent = '📞 联系中介';
-        btn.disabled = false;
-      }
-    });
-  });
 }
 
-async function refreshListings(retries = 2) {
+async function refreshListings() {
   if (!state.token) return;
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const data = await api('/api/listings');
-      state.listings = data.listings || [];
-      renderListings();
-      return;
-    } catch {
-      if (i < retries) await new Promise((r) => setTimeout(r, 1000));
-    }
+  try {
+    const data = await api('/api/listings');
+    state.listings = data.listings || [];
+    renderListings();
+  } catch {
+    renderListings();
   }
-  // All retries failed — keep existing state.listings
 }
 
-// ---------------------------------------------------------------------------
-// Agent task flow
-// ---------------------------------------------------------------------------
-
-function pollTaskStatus(taskId) {
+async function pollTaskStatus(taskId) {
   let polls = 0;
-  const maxPolls = 40;
-  const interval = setInterval(async () => {
+  const timer = setInterval(async () => {
+    polls += 1;
     try {
-      polls++;
       const data = await api(`/api/tasks/${taskId}`);
       const task = data.task;
       if (!task) return;
 
       if (task.status === 'completed' && task.result?.report) {
-        clearInterval(interval);
+        clearInterval(timer);
         state.activeTaskId = null;
         state.lastTaskResult = task.result;
-        // Clear context on complete
         addMessage('assistant', task.result.report);
-        refreshListings();
-        addMessage('system', '✅ 搜索完成。<br><button class="save-btn" onclick="document.querySelector(\'#chatInput\').value=\'重新搜：' + escapeHtml(task.question.slice(0, 40)) + '\';document.querySelector(\'#chatForm\').requestSubmit()">🔄 重新搜索</button> · <button class="save-btn" onclick="document.querySelector(\'#chatInput\').value=\'扩大区域再搜\';document.querySelector(\'#chatForm\').requestSubmit()">📡 扩大区域</button>');
-      } else if (task.status === 'cancelled') {
-        clearInterval(interval);
+        addMessage('system', '搜索完成。结果已经保存到当前任务，你可以继续扩大区域或调整预算再搜。');
+        await refreshListings();
+      } else if (task.status === 'cancelled' || task.status === 'expired') {
+        clearInterval(timer);
         state.activeTaskId = null;
-        pendingContext = '';
-        addMessage('system', '❌ 任务已取消。可以重新输入需求。');
-      } else if (polls >= maxPolls) {
-        clearInterval(interval);
+        addMessage('system', task.status === 'expired' ? '任务已超时，可以重新发起搜索。' : '任务已取消。');
+      } else if (polls >= 60) {
+        clearInterval(timer);
         state.activeTaskId = null;
-        addMessage('system', '⏰ 搜索超时。<br><button class="save-btn" style="background:#e74c3c;color:white" onclick="cancelTask(\'' + taskId + '\')">取消任务</button> · <button class="msg-action" onclick="window.open(\'https://www.propertyguru.com.sg/property-for-rent\',\'_blank\')">打开 PropertyGuru</button>');
+        addMessage('system', '等待时间较长。请确认 PropertyGuru 页面和插件是否仍在打开。');
       }
-    } catch { /* ignore */ }
-  }, 5000);
-}
-
-async function cancelTask(taskId) {
-  try {
-    await api(`/api/tasks/${taskId}`, { method: 'DELETE' });
-    state.activeTaskId = null;
-    addMessage('system', '❌ 已取消。可以重新输入需求。');
-  } catch { addMessage('system', '取消失败，请刷新页面重试。'); }
-}
-
-async function loadCompletedTasks() {
-  try {
-    const data = await api('/api/tasks?status=completed');
-    const tasks = (data.tasks || []).slice(0, 3);
-    for (const task of tasks) {
-      if (task.result?.report) {
-        state.lastTaskResult = task.result;
-        addMessage('system', `📋 历史任务：${task.question.slice(0, 60)}`);
-        addMessage('assistant', task.result.report);
-        break;
+    } catch {
+      if (polls >= 8) {
+        clearInterval(timer);
+        state.activeTaskId = null;
       }
     }
-  } catch { /* ignore */ }
+  }, 4000);
 }
 
-async function checkStuckTasks() {
-  // Check for stuck active tasks and offer to cancel
-  try {
-    const waiting = await api('/api/tasks?status=waiting_search');
-    const searching = await api('/api/tasks?status=searching');
-    const stuck = [...(waiting.tasks || []), ...(searching.tasks || [])];
-    if (stuck.length > 0) {
-      const task = stuck[0];
-      const statusText = task.status === 'waiting_search' ? '等待插件执行' : '插件执行中';
-      addMessage('system', `⚠️ 发现一个未完成的任务（${statusText}）：<br>「${task.question.slice(0, 60)}」<br><button class="save-btn" style="background:#e74c3c;color:white" onclick="cancelTask('${task.id}')">取消此任务</button> · <button class="msg-action" onclick="window.open('https://www.propertyguru.com.sg/property-for-rent','_blank')">打开 PropertyGuru 继续</button>`);
-    }
-  } catch { /* ignore */ }
+function buildTaskPrompt(message) {
+  const history = state.conversationLog
+    .slice(-8)
+    .map((entry) => `${entry.role}: ${entry.text}`)
+    .join('\n');
+  return `${history ? `对话历史仅用于理解偏好，不要因为历史关键词自动触发搜索：\n${history}\n---\n` : ''}用户最新消息：${message}\n\n只根据最新消息判断意图。若预算、币种、学校、区域等关键信息不明确，先追问。`;
 }
-
-// Full conversation log for Agent context
-let conversationLog = [];
-const MAX_LOG = 20;
 
 async function handleChatMessage(message) {
-  if (!message.trim()) return;
-
-  addMessage('user', message);
+  const text = message.trim();
+  if (!text) return;
+  addMessage('user', text);
   chatInput.value = '';
-
-  // Build context: full conversation + mark latest message
-  const history = conversationLog.map((m) => `${m.role}: ${m.text}`).join('\n');
-  const prompt = `${history ? '对话历史（仅供参考用户偏好，不要基于历史关键词触发搜索）：\n' + history + '\n---\n' : ''}用户最新消息：${message.trim()}\n\n请只根据「最新消息」判断意图。如果最新消息是闲聊（如"你好"），用 action=chat。如果最新消息明确是找房请求，再看历史里的偏好信息来补充搜索参数。`;
-
-  conversationLog.push({ role: '用户', text: message.trim() });
-  if (conversationLog.length > MAX_LOG) conversationLog = conversationLog.slice(-MAX_LOG);
+  state.conversationLog.push({ role: '用户', text });
 
   try {
+    const pending = addMessage('system', '正在理解需求并创建任务...');
     const data = await api('/api/tasks', {
       method: 'POST',
-      body: JSON.stringify({ question: prompt }),
+      body: JSON.stringify({ question: buildTaskPrompt(text) }),
     });
+    pending.remove();
 
     if (data.needsClarify) {
-      conversationLog.push({ role: 'Agent', text: data.question });
-      addMessage('assistant', `🤔 ${data.question}`);
+      state.conversationLog.push({ role: 'Agent', text: data.question });
+      addMessage('assistant', data.question || '还需要补充一点信息。');
       return;
     }
 
     if (data.answer) {
-      conversationLog.push({ role: 'Agent', text: data.answer });
+      state.conversationLog.push({ role: 'Agent', text: data.answer });
       addMessage('assistant', data.answer);
       return;
     }
@@ -365,84 +266,104 @@ async function handleChatMessage(message) {
     if (data.task) {
       const task = data.task;
       state.activeTaskId = task.id;
-
-      const rounds = task.rounds || [];
-      const round = rounds[0] || {};
-      addMessage('system', `📋 Agent 已规划：${round.strategy || '自动搜索'}（${round.instructionCount || 0} 个搜索页面）`);
-
-      // Auto-open PropertyGuru
-      const insts = round.instructions || round.instructionCount;
-      if (task.intent?.location) {
-        const searchUrl = `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? '&maxprice=' + task.intent.maxPrice : ''}`;
-        addMessage('system', `<span>🔍 正在打开 PropertyGuru 搜索页面…</span><br><a class="msg-action" href="${searchUrl}" target="_blank" rel="noreferrer">打开 PropertyGuru 开始搜索 →</a>`);
-        window.open(searchUrl, '_blank', 'noreferrer');
-      } else {
-        addMessage('system', '<a class="msg-action" href="https://www.propertyguru.com.sg/property-for-rent" target="_blank" rel="noreferrer">打开 PropertyGuru 开始搜索 →</a>');
-        window.open('https://www.propertyguru.com.sg/property-for-rent', '_blank', 'noreferrer');
-      }
-
-      addMessage('system', '插件会自动在 PropertyGuru 页面执行搜索。搜完后结果会出现在这里。');
+      const round = task.rounds?.[0] || {};
+      addMessage('assistant', `任务已创建。\n\n- 搜索策略：${round.strategy || '自动搜索'}\n- 搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n我会打开 PropertyGuru，插件会在浏览器里继续执行。`);
+      const target = task.intent?.location
+        ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? `&maxprice=${task.intent.maxPrice}` : ''}`
+        : 'https://www.propertyguru.com.sg/property-for-rent';
+      window.open(target, '_blank', 'noreferrer');
       pollTaskStatus(task.id);
     }
-  } catch (err) {
-    addMessage('system', `出错了：${err.message}`);
+  } catch (error) {
+    addMessage('system', `出错了：${error.message}`);
   }
 }
 
-// Global click delegation for save buttons (avoids DOM rebinding issues)
-chatLog.addEventListener('click', async (event) => {
-  const btn = event.target.closest('.save-btn');
-  if (!btn || btn.classList.contains('saved')) return;
-
-  // Use pre-stored listing data from data attribute
-  let listing = null;
-  if (btn.dataset.listing) {
-    try { listing = JSON.parse(btn.dataset.listing); } catch {}
-  }
-
-  if (!listing) { btn.textContent = '无数据'; return; }
-
+async function loadCompletedTasks() {
   try {
-    await api('/api/listings/save', { method: 'POST', body: JSON.stringify({ listing }) });
-    btn.textContent = '已收藏';
-    btn.classList.add('saved');
-    refreshListings();
-  } catch { btn.textContent = '失败'; }
-});
+    const data = await api('/api/tasks?status=completed');
+    const task = (data.tasks || [])[0];
+    if (task?.result?.report) {
+      state.lastTaskResult = task.result;
+      addMessage('system', `最近一次搜索：${escapeHtml(task.question.slice(0, 80))}`);
+      addMessage('assistant', task.result.report);
+    }
+  } catch {}
+}
 
-// ---------------------------------------------------------------------------
-// Events
-// ---------------------------------------------------------------------------
+async function checkActiveTasks() {
+  try {
+    const waiting = await api('/api/tasks?status=waiting_search');
+    const searching = await api('/api/tasks?status=searching');
+    const active = [...(waiting.tasks || []), ...(searching.tasks || [])];
+    if (!active.length) return;
+    const task = active[0];
+    state.activeTaskId = task.id;
+    addMessage('system', `检测到未完成任务：${escapeHtml(task.question.slice(0, 80))}<br><a class="msg-action" href="https://www.propertyguru.com.sg/property-for-rent" target="_blank" rel="noreferrer">打开 PropertyGuru 继续</a>`);
+    pollTaskStatus(task.id);
+  } catch {}
+}
+
+function fillAccountInfo() {
+  if (!state.user) return;
+  accountBadge.textContent = `${state.user.email} · ${state.user.plan || 'free'}`;
+  settingsInfo.innerHTML = `
+    邮箱：${escapeHtml(state.user.email)}<br>
+    套餐：${escapeHtml(state.user.plan || 'free')}<br>
+    对话次数：${Number(state.user.chatCount || 0)}
+  `;
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = `settings-msg ${type}`;
+  el.classList.remove('hidden');
+}
+
+async function loadProfile() {
+  try {
+    const data = await api('/api/profile');
+    const raw = typeof data.profile === 'string' ? data.profile : '';
+    const school = raw.match(/学校:\s*(.+)/);
+    const budget = raw.match(/预算:\s*S\$(\d+)/);
+    if (school && !school[1].includes('未')) profileSchool.value = school[1].trim();
+    if (budget) profileBudget.value = budget[1];
+  } catch {}
+}
+
+async function bootLoggedIn() {
+  const data = await api('/api/auth/me');
+  state.user = data.user;
+  showScreen(true);
+  fillAccountInfo();
+  await refreshListings();
+  addMessage('assistant', '欢迎回来。直接告诉我你的租房需求；如果信息不够，我会先追问再搜索。');
+  await loadCompletedTasks();
+  await checkActiveTasks();
+}
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const email = emailInput.value.trim();
-  const password = passwordInput.value || '';
-
-  if (!email || !email.includes('@')) { showLoginError('请输入有效邮箱'); return; }
-  if (!password || password.length < 6) { showLoginError('密码至少6位'); return; }
-  showLoginError('');
-
+  const password = passwordInput.value;
+  if (!email.includes('@')) { showError('请输入有效邮箱。'); return; }
+  if (!password || password.length < 6) { showError('密码至少 6 位。'); return; }
+  showError('');
   try {
+    let data;
     try {
-      const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-      setToken(data.token);
-      state.user = data.user;
+      data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
     } catch {
-      // Register new account
-      const data = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) });
-      setToken(data.token);
-      state.user = data.user;
+      data = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) });
     }
-
+    setToken(data.token);
+    state.user = data.user;
     showScreen(true);
-    accountBadge.textContent = `${state.user.email} · ${state.user.plan}`;
+    fillAccountInfo();
     await refreshListings();
-    addMessage('assistant', `你好！我是你的新加坡租房 Agent。\n\n直接告诉我你的需求，比如「**NUS附近 1500新币以内 单间**」，我会自动帮你搜 PropertyGuru、筛选排名。`);
-    await loadCompletedTasks();
-    await checkStuckTasks();
-  } catch (err) {
-    showLoginError(err.message || '登录失败');
+    addMessage('assistant', '登录成功。你可以直接发起找房任务，例如：NUS 附近 1500 新币以内单间。');
+  } catch (error) {
+    showError(error.message || '登录失败。');
   }
 });
 
@@ -451,88 +372,82 @@ chatForm.addEventListener('submit', async (event) => {
   await handleChatMessage(chatInput.value);
 });
 
-// ---------------------------------------------------------------------------
-// Settings
-// ---------------------------------------------------------------------------
-
-function openSettings() {
-  settingsModal.classList.remove('hidden');
-  // Fill account info
-  if (state.user) {
-    settingsInfo.innerHTML = `
-      邮箱：${escapeHtml(state.user.email)}<br>
-      套餐：${escapeHtml(state.user.plan)} · 已聊 ${state.user.chatCount || 0} 次<br>
-      ${state.user.activated ? '已激活' : '未激活'}
-    `;
-  }
-  // Load profile
-  loadProfile();
-}
-
-function closeSettings() {
-  settingsModal.classList.add('hidden');
-  passwordMsg.classList.add('hidden');
-  profileMsg.classList.add('hidden');
-}
-
-async function loadProfile() {
+chatLog.addEventListener('click', async (event) => {
+  const button = event.target.closest('.save-btn');
+  if (!button || button.classList.contains('saved')) return;
+  let listing = null;
+  try { listing = JSON.parse(button.dataset.listing || 'null'); } catch {}
+  if (!listing) return;
   try {
-    const data = await api('/api/profile');
-    const profile = data.profile;
-    if (profile?.sections) {
-      const basics = profile.sections['基础信息'] || [];
-      const prefs = profile.sections['偏好'] || [];
-      const deals = (profile.sections['雷区'] || []).filter((l) => l.startsWith('- '));
-
-      for (const line of basics) {
-        const school = line.match(/学校:\s*(.+)/);
-        if (school && school[1] !== '未填写') profileSchool.value = school[1];
-        const budget = line.match(/预算:\s*S\$\s*(\d+)/);
-        if (budget) profileBudget.value = budget[1];
-      }
-      for (const line of prefs) {
-        const type = line.match(/房源类型:\s*(.+)/);
-        if (type && type[1] !== '未限制') profileType.value = type[1];
-        const areas = line.match(/首选区域:\s*(.+)/);
-        if (areas && areas[1] !== '未填写') profileAreas.value = areas[1];
-      }
-      if (deals.length) {
-        profileDealbreakers.value = deals.map((d) => d.replace('- ', '')).join(', ');
-      }
-    }
-  } catch { /* ignore */ }
-}
-
-settingsBtn.addEventListener('click', openSettings);
-closeSettingsBtn.addEventListener('click', closeSettings);
-settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
-
-passwordForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  passwordMsg.classList.add('hidden');
-  try {
-    await api('/api/auth/password', {
-      method: 'PUT',
-      body: JSON.stringify({
-        oldPassword: document.querySelector('#oldPasswordInput').value,
-        newPassword: document.querySelector('#newPasswordInput').value,
-      }),
-    });
-    passwordMsg.textContent = '密码已更新';
-    passwordMsg.className = 'settings-msg success';
-    passwordMsg.classList.remove('hidden');
-    document.querySelector('#oldPasswordInput').value = '';
-    document.querySelector('#newPasswordInput').value = '';
-  } catch (err) {
-    passwordMsg.textContent = err.message;
-    passwordMsg.className = 'settings-msg error';
-    passwordMsg.classList.remove('hidden');
+    await api('/api/listings/save', { method: 'POST', body: JSON.stringify({ listing }) });
+    button.textContent = '已收藏';
+    button.classList.add('saved');
+    await refreshListings();
+  } catch {
+    button.textContent = '收藏失败';
   }
 });
 
-profileForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  profileMsg.classList.add('hidden');
+listingGrid.addEventListener('click', async (event) => {
+  const deleteButton = event.target.closest('.delete-btn');
+  if (deleteButton) {
+    try {
+      await api(`/api/listings/${deleteButton.dataset.id}`, { method: 'DELETE' });
+      state.listings = state.listings.filter((item) => item.id !== deleteButton.dataset.id);
+      renderListings();
+    } catch {}
+    return;
+  }
+
+  const contactButton = event.target.closest('.contact-btn');
+  if (!contactButton) return;
+  contactButton.disabled = true;
+  contactButton.textContent = '生成中...';
+  try {
+    const listing = {
+      title: contactButton.dataset.title,
+      price: contactButton.dataset.price,
+      address: contactButton.dataset.address,
+      mrt: contactButton.dataset.mrt,
+      url: contactButton.dataset.url,
+    };
+    const data = await api('/api/contact/message', { method: 'POST', body: JSON.stringify({ listing }) });
+    addMessage('assistant', `**联系中介话术**\n\n\`${data.message}\``);
+  } catch (error) {
+    addMessage('system', `生成失败：${error.message}`);
+  } finally {
+    contactButton.disabled = false;
+    contactButton.textContent = '生成联系话术';
+  }
+});
+
+settingsBtn.addEventListener('click', async () => {
+  fillAccountInfo();
+  settingsModal.classList.remove('hidden');
+  await loadProfile();
+});
+closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+settingsModal.addEventListener('click', (event) => {
+  if (event.target === settingsModal) settingsModal.classList.add('hidden');
+});
+
+passwordForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    await api('/api/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ oldPassword: $('#oldPasswordInput').value, newPassword: $('#newPasswordInput').value }),
+    });
+    showMsg(passwordMsg, '密码已更新。', 'success');
+    passwordForm.reset();
+  } catch (error) {
+    showMsg(passwordMsg, error.message, 'error');
+  }
+});
+
+profileForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const splitList = (value) => value.split(/[,，]/).map((item) => item.trim()).filter(Boolean);
   try {
     await api('/api/profile', {
       method: 'POST',
@@ -541,17 +456,13 @@ profileForm.addEventListener('submit', async (e) => {
         school: profileSchool.value,
         budget: profileBudget.value ? Number(profileBudget.value) : null,
         propertyType: profileType.value || null,
-        preferredAreas: profileAreas.value ? profileAreas.value.split(/[,，]/).map((s) => s.trim()).filter(Boolean) : [],
-        dealbreakers: profileDealbreakers.value ? profileDealbreakers.value.split(/[,，]/).map((s) => s.trim()).filter(Boolean) : [],
+        preferredAreas: splitList(profileAreas.value),
+        dealbreakers: splitList(profileDealbreakers.value),
       }),
     });
-    profileMsg.textContent = '偏好已保存';
-    profileMsg.className = 'settings-msg success';
-    profileMsg.classList.remove('hidden');
-  } catch (err) {
-    profileMsg.textContent = err.message;
-    profileMsg.className = 'settings-msg error';
-    profileMsg.classList.remove('hidden');
+    showMsg(profileMsg, '偏好已保存。', 'success');
+  } catch (error) {
+    showMsg(profileMsg, error.message, 'error');
   }
 });
 
@@ -559,29 +470,18 @@ logoutBtn.addEventListener('click', () => {
   state.token = null;
   state.user = null;
   state.listings = [];
-  state.activeTaskId = null;
   localStorage.removeItem(tokenKey);
   chatLog.innerHTML = '';
   showScreen(false);
 });
 
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
-
+renderListings();
 if (state.token) {
   try {
-    const data = await api('/api/auth/me');
-    state.user = data.user;
-    showScreen(true);
-    accountBadge.textContent = `${state.user.email} · ${state.user.plan}`;
-    await refreshListings();
-    addMessage('assistant', '欢迎回来！直接告诉我你的找房需求。');
-    await loadCompletedTasks();
-    await checkStuckTasks();
+    await bootLoggedIn();
   } catch {
-    state.token = null;
     localStorage.removeItem(tokenKey);
+    state.token = null;
     showScreen(false);
   }
 } else {

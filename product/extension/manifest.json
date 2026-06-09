@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Can Rent Lah",
-  "description": "给中国留学生的新加坡租房 AI 侧边栏。",
-  "version": "0.1.0",
+  "description": "给中国留学生用的新加坡租房 AI 侧边栏。",
+  "version": "0.1.1",
   "permissions": ["storage", "tabs"],
   "background": {
     "service_worker": "background.js"
