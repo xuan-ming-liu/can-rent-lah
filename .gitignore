@@ -3,6 +3,13 @@ node_modules/
 *.log
 .DS_Store
 
+# Product runtime data
+product/.env
+product/data/
+product/**/*.db
+product/**/*.db-shm
+product/**/*.db-wal
+
 # User data — generated locally, never committed
 record/profile/*.md
 record/profile/**/*.md

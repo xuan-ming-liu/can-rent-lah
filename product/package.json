@@ -1,0 +1,17 @@
+{
+  "name": "can-rent-lah-product",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.mjs",
+    "start": "node server/index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
+    "better-sqlite3": "^12.10.0"
+  }
+}
