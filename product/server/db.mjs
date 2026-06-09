@@ -96,7 +96,11 @@ db.exec(`
 // Schema migrations (safe to run on existing DBs)
 // ---------------------------------------------------------------------------
 
-try { db.exec("ALTER TABLE sessions ADD COLUMN expires_at TEXT NOT NULL DEFAULT (datetime('now', '+7 days'))"); } catch {}
+// SQLite ALTER TABLE only supports constant defaults — use multi-step migration
+try {
+  db.exec("ALTER TABLE sessions ADD COLUMN expires_at TEXT");
+  db.exec("UPDATE sessions SET expires_at = datetime(created_at, '+7 days') WHERE expires_at IS NULL");
+} catch {}
 try { db.exec("ALTER TABLE listings ADD COLUMN pros TEXT NOT NULL DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE listings ADD COLUMN cons TEXT NOT NULL DEFAULT ''"); } catch {}
 

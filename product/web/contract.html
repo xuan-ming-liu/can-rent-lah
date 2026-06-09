@@ -5,48 +5,146 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>合同审查 · Can Rent Lah</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     .contract-layout {
-      min-height: 100vh; display: grid; grid-template-rows: auto 1fr;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
     }
+
     .contract-top {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: hsl(0 0% 100% / 0.92);
+      backdrop-filter: blur(16px) saturate(150%);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+      position: sticky;
+      top: 0;
+      z-index: var(--z-header);
     }
+
+    .contract-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .contract-body {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 0; overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      overflow: hidden;
+      min-height: 0;
     }
+
     .contract-input-panel {
-      padding: 24px; display: grid; grid-template-rows: 1fr auto; gap: 14px;
+      padding: 24px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 14px;
+      min-height: 0;
     }
+
     .contract-input-panel textarea {
-      flex: 1; min-height: 300px; font-size: 13px; font-family: monospace;
-      line-height: 1.6; resize: none;
+      flex: 1;
+      min-height: 300px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      resize: none;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      padding: 16px;
+      transition: border-color var(--duration-fast) var(--ease-out),
+                  box-shadow var(--duration-fast) var(--ease-out);
     }
+
+    .contract-input-panel textarea:focus {
+      border-color: var(--color-brand-400);
+      box-shadow: 0 0 0 3px hsl(172 55% 38% / 0.12);
+    }
+
     .contract-output-panel {
-      padding: 24px; overflow: auto; border-left: 1px solid var(--line);
-      background: #fdfdfd; font-size: 14px; line-height: 1.7;
+      padding: 24px;
+      overflow: auto;
+      border-left: 1px solid var(--border-subtle);
+      background: hsl(168 15% 98%);
+      font-size: var(--font-size-base);
+      line-height: var(--line-height-relaxed);
     }
-    .contract-output-panel h3 { margin-top: 18px; }
+
+    .contract-output-panel h2 { font-size: var(--font-size-xl); margin-top: 0; }
+    .contract-output-panel h3 { margin-top: 20px; font-size: var(--font-size-lg); }
     .contract-output-panel h3:first-child { margin-top: 0; }
-    .contract-output-panel .critical { color: #721c24; background: #f8d7da; padding: 2px 6px; border-radius: 4px; }
-    .contract-output-panel .warning { color: #856404; background: #fff3cd; padding: 2px 6px; border-radius: 4px; }
-    .contract-output-panel .pass { color: #155724; background: #d4edda; padding: 2px 6px; border-radius: 4px; }
+
+    .contract-output-panel .critical {
+      display: inline-block;
+      color: var(--color-danger-700);
+      background: var(--color-danger-50);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-weight: 650;
+    }
+
+    .contract-output-panel .warning {
+      display: inline-block;
+      color: var(--color-warning-700);
+      background: var(--color-warning-50);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-weight: 650;
+    }
+
+    .contract-output-panel .pass {
+      display: inline-block;
+      color: var(--color-success-700);
+      background: var(--color-success-50);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-weight: 650;
+    }
+
+    .contract-empty {
+      display: grid;
+      place-items: center;
+      height: 100%;
+      color: var(--text-tertiary);
+      text-align: center;
+      padding: 32px;
+    }
+
+    .contract-empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
 
     @media (max-width: 860px) {
-      .contract-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-      .contract-output-panel { border-left: 0; border-top: 1px solid var(--line); }
+      .contract-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      .contract-output-panel {
+        border-left: 0;
+        border-top: 1px solid var(--border-subtle);
+      }
     }
   </style>
 </head>
 <body class="contract-layout">
   <header class="contract-top">
-    <div>
-      <span class="brand" style="font-size:18px;font-weight:900;color:var(--accent)">Can Rent Lah</span>
-      <span style="color:var(--muted);margin-left:12px;font-size:14px">合同审查</span>
+    <div class="contract-brand">
+      <span class="brand-mark">Can Rent Lah</span>
+      <span style="color:var(--text-tertiary);font-size:var(--font-size-base)">合同审查</span>
     </div>
-    <div style="display:flex;gap:8px">
-      <a href="/" class="secondary small" style="text-decoration:none;display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:12px">← 返回</a>
+    <div style="display:flex;gap:10px">
+      <a href="/" class="secondary small" style="text-decoration:none">← 返回</a>
       <button id="reviewBtn">开始审查</button>
     </div>
   </header>
@@ -54,21 +152,31 @@
   <div class="contract-body">
     <div class="contract-input-panel">
       <textarea id="contractInput" placeholder="在这里粘贴你的 TA（Tenancy Agreement）或 LOI（Letter of Intent）全文...&#10;&#10;Agent 会逐条审查：&#10;🔴 必须修改的条款&#10;🟡 建议协商的条款&#10;🟢 符合标准的条款&#10;&#10;特别检查：外交条款、押金条款、维修责任、HDB/Condo 专项"></textarea>
-      <p id="contractMsg" style="font-size:12px;color:var(--muted);margin:0">
-        💡 也可以直接在聊天框里发「审合同」+ 粘贴文本
+      <p id="contractMsg" style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin:0">
+        💡 也可以直接在聊天框里发"审合同" + 粘贴文本
       </p>
     </div>
 
     <div id="contractOutput" class="contract-output-panel">
-      <p class="subtle">输入合同内容后点击「开始审查」，Agent 会逐条分析。</p>
+      <div class="contract-empty">
+        <div>
+          <div class="contract-empty-icon">📋</div>
+          <p>输入合同内容后点击「开始审查」，Agent 会逐条分析。</p>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script type="module">
+  <!-- GSAP -->
+  <script src="/lib/gsap.min.js"></script>
+  <script src="/lib/TextPlugin.min.js"></script>
+
+  <script>
     const token = localStorage.getItem('canRentLahToken');
     if (!token) { location.href = '/'; }
 
     const API_BASE = window.location.origin;
+
     async function api(path, options = {}) {
       const res = await fetch(`${API_BASE}${path}`, {
         ...options,
@@ -88,18 +196,47 @@
     const msg = document.querySelector('#contractMsg');
     const btn = document.querySelector('#reviewBtn');
 
+    // Entrance animation
+    gsap.from('.contract-top', { opacity: 0, y: -16, duration: 0.4, ease: 'power3.out' });
+    gsap.from('.contract-body', { opacity: 0, duration: 0.5, delay: 0.15, ease: 'power3.out' });
+
     btn.addEventListener('click', async () => {
       const text = input.value.trim();
-      if (!text) { msg.textContent = '请粘贴合同内容'; msg.style.color = '#e74c3c'; return; }
+      if (!text) {
+        msg.textContent = '请粘贴合同内容';
+        msg.style.color = 'var(--color-danger-500)';
+        gsap.fromTo(btn, { x: -6 }, { x: 6, duration: 0.06, repeat: 3, yoyo: true, ease: 'power2.inOut', clearProps: 'x' });
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = '审查中...';
-      output.innerHTML = '<p class="subtle">Agent 正在逐条分析合同，请稍候...</p>';
+
+      // Loading state
+      output.innerHTML = `
+        <div class="contract-empty">
+          <div>
+            <div class="loading-dots" style="justify-content:center;margin-bottom:12px">
+              <span></span><span></span><span></span>
+            </div>
+            <p>Agent 正在逐条分析合同，请稍候...</p>
+          </div>
+        </div>
+      `;
+
       msg.textContent = '';
+
       try {
         const data = await api('/api/contract/review', { method: 'POST', body: JSON.stringify({ contractText: text }) });
         output.innerHTML = renderReport(data.report);
+
+        // Animate report sections in
+        gsap.from(output.querySelectorAll('h2, h3, p, ul'), {
+          opacity: 0, y: 12, stagger: 0.04, duration: 0.4, ease: 'power3.out'
+        });
       } catch (err) {
-        output.innerHTML = `<p style="color:#e74c3c">审查失败：${err.message}</p>`;
+        output.innerHTML = `<p style="color:var(--color-danger-500)">审查失败：${err.message}</p>`;
+        gsap.from(output.querySelector('p'), { opacity: 0, y: 8, duration: 0.3, ease: 'power2.out' });
       } finally {
         btn.disabled = false;
         btn.textContent = '开始审查';
@@ -108,16 +245,24 @@
 
     function renderReport(md) {
       const lines = String(md || '').split(/\r?\n/);
-      const html = []; let inList = false;
+      const html = [];
+      let inList = false;
+
       function close() { if (inList) { html.push('</ul>'); inList = false; } }
+
       for (let line of lines) {
         line = line.trimEnd();
         if (!line.trim()) { close(); continue; }
         const h = line.match(/^(#{1,3})\s+(.+)$/);
         if (h) { close(); html.push(`<h${h[1].length + 2}>${esc(h[2])}</h${h[1].length + 2}>`); continue; }
         const b = line.match(/^[-*]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
-        if (b) { if (!inList) { html.push('<ul>'); inList = true; } html.push(`<li>${colorTags(esc(b[1]))}</li>`); continue; }
-        close(); html.push(`<p>${colorTags(esc(line))}</p>`);
+        if (b) {
+          if (!inList) { html.push('<ul>'); inList = true; }
+          html.push(`<li>${colorTags(esc(b[1]))}</li>`);
+          continue;
+        }
+        close();
+        html.push(`<p>${colorTags(esc(line))}</p>`);
       }
       close();
       return html.join('');

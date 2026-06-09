@@ -1,4 +1,16 @@
-// apiBase is set by auth-sync.js when user logs in on the web app
+/* ==========================================================================
+   Can Rent Lah — Chrome Extension Content Script
+   GSAP-powered sidebar + listing extraction + task execution
+   ========================================================================== */
+
+// Ensure GSAP is loaded (injected via manifest content_scripts before this file)
+if (typeof gsap === 'undefined') {
+  console.warn('[CanRentLah] GSAP not loaded — animations disabled');
+}
+
+// ==========================================================================
+// Text Dictionary
+// ==========================================================================
 
 const TEXT = {
   requestFailed: '请求失败',
@@ -28,8 +40,9 @@ const TEXT = {
   checkSite: '请回工作台查看 AI 推荐',
 };
 
-let currentListings = [];
-let executingTask = false;
+// ==========================================================================
+// Storage Helpers
+// ==========================================================================
 
 function getStorage(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -39,14 +52,9 @@ function setStorage(values) {
   return new Promise((resolve) => chrome.storage.local.set(values, resolve));
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+// ==========================================================================
+// API Wrapper
+// ==========================================================================
 
 function callApi(method, path, body) {
   return new Promise(async (resolve, reject) => {
@@ -88,6 +96,65 @@ function callApi(method, path, body) {
 
 const apiGet = (path) => callApi('GET', path);
 const apiPost = (path, body) => callApi('POST', path, body);
+
+// ==========================================================================
+// GSAP Animation Presets (safe wrapper for GSAP absence)
+// ==========================================================================
+
+const animate = {
+  fadeUp(el, opts = {}) {
+    if (typeof gsap === 'undefined') { el.style.opacity = '1'; return; }
+    return gsap.fromTo(el, { opacity: 0, y: opts.y || 10 }, { opacity: 1, y: 0, duration: opts.duration || 0.35, delay: opts.delay || 0, ease: 'power3.out' });
+  },
+
+  fadeIn(el, opts = {}) {
+    if (typeof gsap === 'undefined') { el.style.opacity = '1'; return; }
+    return gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: opts.duration || 0.3, delay: opts.delay || 0, ease: 'power2.out' });
+  },
+
+  slideRight(el, opts = {}) {
+    if (typeof gsap === 'undefined') { el.style.opacity = '1'; return; }
+    return gsap.fromTo(el, { opacity: 0, x: opts.x || 16 }, { opacity: 1, x: 0, duration: opts.duration || 0.35, delay: opts.delay || 0, ease: 'power3.out' });
+  },
+
+  staggerChildren(parent, selector, opts = {}) {
+    if (typeof gsap === 'undefined') {
+      if (parent) parent.querySelectorAll(selector).forEach((el) => { el.style.opacity = '1'; });
+      return;
+    }
+    return gsap.fromTo(parent.querySelectorAll(selector),
+      { opacity: 0, y: opts.y || 10 },
+      { opacity: 1, y: 0, stagger: opts.stagger || 0.05, duration: opts.duration || 0.35, ease: 'power3.out', clearProps: 'transform' }
+    );
+  },
+
+  shake(el) {
+    if (typeof gsap === 'undefined') return;
+    return gsap.fromTo(el, { x: -6 }, { x: 6, duration: 0.06, repeat: 3, yoyo: true, ease: 'power2.inOut', clearProps: 'x' });
+  },
+
+  pulse(el) {
+    if (typeof gsap === 'undefined') return;
+    return gsap.fromTo(el, { scale: 1 }, { scale: 1.04, duration: 0.15, yoyo: true, repeat: 1, ease: 'power2.inOut', clearProps: 'scale' });
+  },
+
+  sidebarEntrance(el) {
+    if (typeof gsap === 'undefined') { el.style.opacity = '1'; return; }
+    return gsap.fromTo(el,
+      { opacity: 0, x: 40, scale: 0.96 },
+      { opacity: 1, x: 0, scale: 1, duration: 0.5, ease: 'power3.out' }
+    );
+  },
+
+  itemExit(el, callback) {
+    if (typeof gsap === 'undefined') { el.remove(); if (callback) callback(); return; }
+    return gsap.to(el, { opacity: 0, x: 30, height: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0, marginBottom: 0, duration: 0.25, ease: 'power2.in', onComplete: () => { el.remove(); if (callback) callback(); } });
+  },
+};
+
+// ==========================================================================
+// Data Extraction
+// ==========================================================================
 
 function valueToText(value) {
   if (value == null) return '';
@@ -229,10 +296,27 @@ function extractListings() {
   return fromNext.length ? fromNext : parseDomCards();
 }
 
+// ==========================================================================
+// Sidebar DOM
+// ==========================================================================
+
+let currentListings = [];
+let executingTask = false;
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function createSidebar() {
   if (document.querySelector('#can-rent-lah-sidebar')) return;
   const root = document.createElement('aside');
   root.id = 'can-rent-lah-sidebar';
+  root.style.opacity = '0';
   root.innerHTML = `
     <div class="crl-header">
       <div>
@@ -250,13 +334,30 @@ function createSidebar() {
     </form>
   `;
   document.body.append(root);
+
+  // Animate sidebar entrance
+  animate.sidebarEntrance(root);
+
   root.querySelector('#crl-refresh').addEventListener('click', refreshAll);
   root.querySelector('#crl-form').addEventListener('submit', onChatSubmit);
 }
 
+// ==========================================================================
+// Render Functions
+// ==========================================================================
+
 function renderStatus(text) {
   const el = document.querySelector('#crl-status');
-  if (el) el.textContent = text;
+  if (el) {
+    if (typeof gsap !== 'undefined') {
+      gsap.to(el, { opacity: 0, duration: 0.12, onComplete: () => {
+        el.textContent = text;
+        gsap.to(el, { opacity: 1, duration: 0.15 });
+      } });
+    } else {
+      el.textContent = text;
+    }
+  }
 }
 
 function formatInline(text) {
@@ -299,7 +400,17 @@ function addChat(role, text) {
   const item = document.createElement('div');
   item.className = `crl-msg ${role}`;
   item.innerHTML = role === 'assistant' ? renderMarkdown(text) : escapeHtml(text);
+  item.style.opacity = '0';
   chat.append(item);
+
+  // Animate in
+  const fromX = role === 'user' ? 20 : -16;
+  if (typeof gsap !== 'undefined') {
+    gsap.fromTo(item, { opacity: 0, x: fromX, y: 8 }, { opacity: 1, x: 0, y: 0, duration: 0.3, ease: 'power3.out' });
+  } else {
+    item.style.opacity = '1';
+  }
+
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -308,12 +419,18 @@ function renderListings() {
   if (!box) return;
   box.innerHTML = '';
   if (!currentListings.length) {
-    box.textContent = TEXT.empty;
+    const emptyEl = document.createElement('div');
+    emptyEl.textContent = TEXT.empty;
+    emptyEl.style.padding = '12px';
+    emptyEl.style.textAlign = 'center';
+    box.append(emptyEl);
     return;
   }
+
   for (const listing of currentListings.slice(0, 10)) {
     const row = document.createElement('div');
     row.className = 'crl-listing';
+    row.style.opacity = '0';
     row.innerHTML = `
       <strong>${escapeHtml(listing.title)}</strong>
       <span>${escapeHtml([listing.price, listing.address].filter(Boolean).join(' · '))}</span>
@@ -329,24 +446,38 @@ function renderListings() {
     });
     box.append(row);
   }
+
+  // Staggered entrance
+  animate.staggerChildren(box, '.crl-listing', { stagger: 0.04, y: 8 });
 }
 
 function renderTaskBar(tasks) {
   const bar = document.querySelector('#crl-tasks');
   if (!bar) return;
   if (!tasks?.length) {
-    bar.classList.add('hidden');
-    bar.innerHTML = '';
+    if (!bar.classList.contains('hidden')) {
+      if (typeof gsap !== 'undefined') {
+        gsap.to(bar, { opacity: 0, y: -8, duration: 0.2, ease: 'power2.in', onComplete: () => {
+          bar.classList.add('hidden');
+          bar.innerHTML = '';
+          bar.style.opacity = '';
+          bar.style.transform = '';
+        } });
+      } else {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+      }
+    }
     return;
   }
-  bar.classList.remove('hidden');
+
   bar.innerHTML = `
     <div class="crl-tasks-head">
       <strong>${TEXT.taskPending}</strong>
       <span>${tasks.length} 个</span>
     </div>
     ${tasks.slice(0, 3).map((task) => `
-      <div class="crl-task-item">
+      <div class="crl-task-item" style="opacity:0">
         <div class="crl-task-question">${escapeHtml(task.question.slice(0, 86))}${task.question.length > 86 ? '...' : ''}</div>
         <div class="crl-task-meta">
           <span>${task.status === 'searching' ? '执行中' : '等待执行'}</span>
@@ -356,7 +487,21 @@ function renderTaskBar(tasks) {
       </div>
     `).join('')}
   `;
+
+  if (bar.classList.contains('hidden')) {
+    bar.classList.remove('hidden');
+    if (typeof gsap !== 'undefined') {
+      gsap.fromTo(bar, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power3.out' });
+    }
+  }
+
+  // Animate task items in
+  animate.staggerChildren(bar, '.crl-task-item', { stagger: 0.06, y: 6 });
 }
+
+// ==========================================================================
+// Task Execution
+// ==========================================================================
 
 async function fetchAndShowTasks() {
   try {
@@ -406,7 +551,7 @@ async function executeTaskInstructions(task) {
     }
 
     if (isCaptchaPage()) {
-      addChat('assistant', 'PropertyGuru 正在要求人机验证。请手动完成验证，然后点击侧边栏“刷新”。');
+      addChat('assistant', 'PropertyGuru 正在要求人机验证。请手动完成验证，然后点击侧边栏"刷新"。');
       renderStatus('等待人机验证');
       executingTask = false;
       return;
@@ -488,6 +633,10 @@ async function sendCollectedToServer(taskId, collected, roundIndex) {
   }
 }
 
+// ==========================================================================
+// Chat Form
+// ==========================================================================
+
 async function onChatSubmit(event) {
   event.preventDefault();
   const input = document.querySelector('#crl-input');
@@ -499,8 +648,18 @@ async function onChatSubmit(event) {
   try {
     addChat('assistant', TEXT.creatingTask);
     const data = await apiPost('/api/tasks', { question: message });
-    document.querySelectorAll('#crl-chat .crl-msg.assistant').forEach((node, index, list) => {
-      if (index === list.length - 1 && node.textContent === TEXT.creatingTask) node.remove();
+
+    // Remove "creating task..." message
+    const chat = document.querySelector('#crl-chat');
+    const msgs = chat.querySelectorAll('.crl-msg.assistant');
+    msgs.forEach((node) => {
+      if (node.textContent === TEXT.creatingTask) {
+        if (typeof gsap !== 'undefined') {
+          gsap.to(node, { opacity: 0, duration: 0.2, onComplete: () => node.remove() });
+        } else {
+          node.remove();
+        }
+      }
     });
 
     if (data.needsClarify) {
@@ -520,6 +679,10 @@ async function onChatSubmit(event) {
     addChat('assistant', `${TEXT.aiFailed}: ${error.message}`);
   }
 }
+
+// ==========================================================================
+// Resume + Refresh
+// ==========================================================================
 
 async function resumeTaskExecution() {
   const stored = await getStorage(['canRentLahTaskExec']);
@@ -542,9 +705,15 @@ async function refreshAll() {
   }
 }
 
+// ==========================================================================
+// Boot
+// ==========================================================================
+
 createSidebar();
 refreshAll();
 resumeTaskExecution();
+
+// Delayed re-scans for late-loading content
 window.setTimeout(refreshAll, 1200);
 window.setTimeout(refreshAll, 3000);
 window.setTimeout(refreshAll, 6500);

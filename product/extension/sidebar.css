@@ -1,24 +1,111 @@
+/* ==========================================================================
+   Can Rent Lah — Chrome Extension Sidebar
+   Impeccable design tokens + GSAP animations
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Design Tokens (extension sandbox — can't load external CSS, inline here)
+   Impeccable rules: no pure black/gray, tinted neutrals, purposeful typography
+   -------------------------------------------------------------------------- */
+
+#can-rent-lah-sidebar {
+  /* Typography */
+  --crl-font-sans: "DM Sans", "Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --crl-font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  --crl-font-xs: 0.6875rem;
+  --crl-font-sm: 0.75rem;
+  --crl-font-base: 0.8125rem;
+  --crl-font-md: 0.875rem;
+  --crl-font-lg: 1rem;
+
+  /* Brand Colors — green-teal, not flat green */
+  --crl-brand-50: hsl(168, 55%, 95%);
+  --crl-brand-100: hsl(170, 52%, 88%);
+  --crl-brand-200: hsl(170, 48%, 78%);
+  --crl-brand-300: hsl(171, 44%, 62%);
+  --crl-brand-400: hsl(172, 48%, 44%);
+  --crl-brand-500: hsl(173, 55%, 34%);
+  --crl-brand-600: hsl(174, 58%, 26%);
+  --crl-brand-700: hsl(175, 60%, 18%);
+
+  /* Neutrals — tinted with brand green */
+  --crl-neutral-50: hsl(165, 6%, 96%);
+  --crl-neutral-100: hsl(166, 5%, 90%);
+  --crl-neutral-200: hsl(167, 5%, 82%);
+  --crl-neutral-300: hsl(168, 4%, 68%);
+  --crl-neutral-400: hsl(169, 4%, 52%);
+  --crl-neutral-500: hsl(170, 5%, 40%);
+  --crl-neutral-600: hsl(172, 6%, 30%);
+  --crl-neutral-700: hsl(173, 7%, 20%);
+  --crl-neutral-800: hsl(174, 8%, 14%);
+  --crl-neutral-900: hsl(175, 9%, 8%);
+
+  /* Semantic */
+  --crl-success: hsl(155, 48%, 38%);
+  --crl-success-bg: hsl(150, 45%, 93%);
+  --crl-warning: hsl(38, 60%, 40%);
+  --crl-warning-bg: hsl(40, 55%, 93%);
+  --crl-danger: hsl(6, 50%, 42%);
+  --crl-danger-bg: hsl(8, 50%, 94%);
+
+  /* Shadows */
+  --crl-shadow-sm: 0 2px 6px hsl(174 8% 50% / 0.08);
+  --crl-shadow-md: 0 8px 24px hsl(174 8% 40% / 0.12);
+  --crl-shadow-lg: 0 18px 48px hsl(174 8% 30% / 0.18);
+
+  /* Radius */
+  --crl-radius-sm: 6px;
+  --crl-radius-md: 8px;
+  --crl-radius-lg: 12px;
+  --crl-radius-xl: 16px;
+  --crl-radius-full: 9999px;
+
+  /* Animation */
+  --crl-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --crl-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --crl-duration-fast: 150ms;
+  --crl-duration-normal: 280ms;
+  --crl-duration-slow: 450ms;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar Shell
+   -------------------------------------------------------------------------- */
+
 #can-rent-lah-sidebar {
   position: fixed;
   top: 72px;
   right: 18px;
   z-index: 2147483647;
-  width: 380px;
+  width: 390px;
   max-width: calc(100vw - 28px);
   height: min(720px, calc(100vh - 96px));
   display: grid;
-  grid-template-rows: auto auto minmax(92px, 170px) 1fr auto;
+  grid-template-rows: auto auto minmax(80px, 150px) 1fr auto;
   gap: 10px;
   padding: 12px;
-  border: 1px solid #d7e2df;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #17211f;
-  box-shadow: 0 20px 56px rgba(19, 35, 31, 0.22);
-  font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  border: 1px solid var(--crl-neutral-200);
+  border-radius: var(--crl-radius-xl);
+  background: hsl(0, 0%, 100%);
+  color: var(--crl-neutral-800);
+  box-shadow: var(--crl-shadow-lg);
+  font-family: var(--crl-font-sans);
+  font-size: var(--crl-font-base);
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition: transform 0.35s var(--crl-ease-out), opacity 0.35s var(--crl-ease-out);
 }
 
-#can-rent-lah-sidebar * { box-sizing: border-box; }
+#can-rent-lah-sidebar *,
+#can-rent-lah-sidebar *::before,
+#can-rent-lah-sidebar *::after {
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
 
 .crl-header {
   display: flex;
@@ -26,84 +113,295 @@
   gap: 10px;
   align-items: flex-start;
 }
-.crl-header strong { display: block; font-size: 15px; color: #0b6f63; }
-.crl-header span { display: block; color: #66736f; font-size: 12px; margin-top: 3px; line-height: 1.45; }
+
+.crl-header strong {
+  display: block;
+  font-size: var(--crl-font-md);
+  font-weight: 700;
+  color: var(--crl-brand-600);
+  letter-spacing: -0.015em;
+}
+
+.crl-header span {
+  display: block;
+  color: var(--crl-neutral-500);
+  font-size: var(--crl-font-xs);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons — Impeccable: distinctive, no generic defaults
+   -------------------------------------------------------------------------- */
 
 #can-rent-lah-sidebar button {
   border: 0;
-  border-radius: 7px;
-  background: #0b6f63;
+  border-radius: var(--crl-radius-md);
+  background: var(--crl-brand-600);
   color: white;
-  padding: 7px 10px;
+  padding: 7px 12px;
   cursor: pointer;
-  font: inherit;
-  font-weight: 700;
+  font-family: var(--crl-font-sans);
+  font-weight: 600;
+  font-size: var(--crl-font-sm);
+  transition:
+    background var(--crl-duration-fast) var(--crl-ease-out),
+    transform var(--crl-duration-fast) var(--crl-ease-out),
+    box-shadow var(--crl-duration-fast) var(--crl-ease-out);
 }
-#can-rent-lah-sidebar button:hover { background: #07584f; }
+
+#can-rent-lah-sidebar button:hover {
+  background: var(--crl-brand-700);
+  transform: translateY(-1px);
+  box-shadow: var(--crl-shadow-sm);
+}
+
+#can-rent-lah-sidebar button:active {
+  transform: translateY(0) scale(0.97);
+  transition: transform 60ms var(--crl-ease-out);
+}
+
+/* Ghost/secondary buttons */
+.crl-listing button,
+#crl-refresh {
+  background: var(--crl-brand-50) !important;
+  color: var(--crl-brand-600) !important;
+  border: 1px solid var(--crl-brand-100) !important;
+}
+
+.crl-listing button:hover,
+#crl-refresh:hover {
+  background: var(--crl-brand-100) !important;
+  border-color: var(--crl-brand-200) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Task Bar
+   -------------------------------------------------------------------------- */
 
 .crl-tasks {
-  border: 1px solid #ead7a8;
-  border-radius: 8px;
-  padding: 9px;
-  background: #fffaf0;
+  border: 1px solid hsl(40, 55%, 82%);
+  border-radius: var(--crl-radius-md);
+  padding: 10px;
+  background: hsl(42, 60%, 96%);
 }
+
 .crl-tasks.hidden { display: none; }
-.crl-tasks-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.crl-tasks-head strong { font-size: 12px; color: #895f13; }
-.crl-tasks-head span { font-size: 11px; color: #8a7442; }
-.crl-task-item { padding: 7px 0; border-top: 1px solid #f0e4c7; }
+
+.crl-tasks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.crl-tasks-head strong {
+  font-size: var(--crl-font-sm);
+  color: var(--crl-warning);
+  font-weight: 700;
+}
+
+.crl-tasks-head span {
+  font-size: var(--crl-font-xs);
+  color: hsl(38, 30%, 40%);
+}
+
+.crl-task-item {
+  padding: 8px 0;
+  border-top: 1px solid hsl(40, 40%, 84%);
+}
+
 .crl-task-item:first-of-type { border-top: 0; }
-.crl-task-question { font-size: 12px; color: #17211f; font-weight: 700; line-height: 1.45; }
-.crl-task-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; font-size: 11px; color: #895f13; }
+
+.crl-task-question {
+  font-size: var(--crl-font-sm);
+  color: var(--crl-neutral-800);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.crl-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 5px;
+  font-size: var(--crl-font-xs);
+  color: var(--crl-warning);
+}
+
+/* --------------------------------------------------------------------------
+   Listings Panel
+   -------------------------------------------------------------------------- */
 
 .crl-listings,
 .crl-chat {
   overflow: auto;
-  border: 1px solid #d7e2df;
-  border-radius: 8px;
-  background: #fbfdfc;
+  border: 1px solid var(--crl-neutral-200);
+  border-radius: var(--crl-radius-md);
+  background: hsl(165, 8%, 97%);
 }
-.crl-listings { padding: 8px; font-size: 12px; color: #66736f; }
-.crl-listing { display: grid; gap: 5px; padding: 8px 0; border-bottom: 1px solid #edf3f1; }
+
+.crl-listings {
+  padding: 8px;
+  font-size: var(--crl-font-sm);
+  color: var(--crl-neutral-500);
+}
+
+.crl-listing {
+  display: grid;
+  gap: 5px;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--crl-neutral-100);
+  border-radius: var(--crl-radius-sm);
+  transition: background var(--crl-duration-fast) var(--crl-ease-out);
+}
+
 .crl-listing:last-child { border-bottom: 0; }
-.crl-listing strong { color: #17211f; font-size: 12px; line-height: 1.4; }
-.crl-listing span { color: #66736f; line-height: 1.45; }
-.crl-listing button { justify-self: start; padding: 5px 8px; font-size: 12px; background: #e6f3ef; color: #0b6f63; }
+
+.crl-listing:hover {
+  background: var(--crl-brand-50);
+}
+
+.crl-listing strong {
+  color: var(--crl-neutral-800);
+  font-size: var(--crl-font-sm);
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.crl-listing span {
+  color: var(--crl-neutral-500);
+  line-height: 1.5;
+}
+
+.crl-listing button {
+  justify-self: start;
+  padding: 4px 10px;
+  font-size: var(--crl-font-xs);
+}
+
+/* --------------------------------------------------------------------------
+   Chat Panel
+   -------------------------------------------------------------------------- */
 
 .crl-chat {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 9px;
+  padding: 10px;
 }
+
 .crl-msg {
   white-space: normal;
-  line-height: 1.55;
-  font-size: 13px;
-  padding: 9px;
-  border-radius: 8px;
+  line-height: 1.6;
+  font-size: var(--crl-font-base);
+  padding: 10px 11px;
+  border-radius: var(--crl-radius-md);
   word-break: break-word;
+  max-width: 96%;
 }
-.crl-msg.user { justify-self: end; max-width: 88%; background: #0b6f63; color: white; }
-.crl-msg.assistant { justify-self: start; max-width: 94%; background: white; border: 1px solid #d7e2df; }
-.crl-msg h3, .crl-msg h4 { margin: 8px 0 4px; font-size: 13px; }
-.crl-msg p { margin: 4px 0; }
-.crl-msg ul { margin: 5px 0; padding-left: 18px; }
-.crl-msg li { margin: 2px 0; }
-.crl-msg code { background: #eef2f0; padding: 1px 4px; border-radius: 4px; }
 
-.crl-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.crl-msg.user {
+  justify-self: end;
+  max-width: 88%;
+  background: var(--crl-brand-600);
+  color: white;
+}
+
+.crl-msg.assistant {
+  justify-self: start;
+  background: white;
+  border: 1px solid var(--crl-neutral-200);
+}
+
+.crl-msg h3, .crl-msg h4 { margin: 8px 0 4px; font-size: var(--crl-font-md); color: inherit; }
+.crl-msg h3:first-child, .crl-msg h4:first-child { margin-top: 0; }
+.crl-msg p { margin: 4px 0; color: inherit; }
+.crl-msg ul { margin: 5px 0; padding-left: 18px; }
+.crl-msg li { margin: 2px 0; color: inherit; }
+.crl-msg code {
+  background: hsla(170, 10%, 50%, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--crl-font-mono);
+  font-size: 0.88em;
+}
+
+/* --------------------------------------------------------------------------
+   Composer
+   -------------------------------------------------------------------------- */
+
+.crl-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
 .crl-form textarea {
   min-width: 0;
   resize: vertical;
-  border: 1px solid #d7e2df;
-  border-radius: 7px;
-  padding: 8px;
-  font: inherit;
-  font-size: 13px;
+  border: 1px solid var(--crl-neutral-200);
+  border-radius: var(--crl-radius-md);
+  padding: 10px;
+  font-family: var(--crl-font-sans);
+  font-size: var(--crl-font-base);
+  line-height: 1.5;
   outline: none;
+  color: var(--crl-neutral-800);
+  background: white;
+  transition: border-color var(--crl-duration-fast) var(--crl-ease-out),
+              box-shadow var(--crl-duration-fast) var(--crl-ease-out);
 }
-.crl-form textarea:focus { border-color: #0b6f63; box-shadow: 0 0 0 3px rgba(11, 111, 99, 0.13); }
+
+.crl-form textarea:focus {
+  border-color: var(--crl-brand-300);
+  box-shadow: 0 0 0 3px hsla(172, 48%, 44%, 0.1);
+}
+
+.crl-form textarea::placeholder {
+  color: var(--crl-neutral-400);
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbar (subtle)
+   -------------------------------------------------------------------------- */
+
+.crl-listings::-webkit-scrollbar,
+.crl-chat::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.crl-listings::-webkit-scrollbar-track,
+.crl-chat::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.crl-listings::-webkit-scrollbar-thumb,
+.crl-chat::-webkit-scrollbar-thumb {
+  background: var(--crl-neutral-200);
+  border-radius: var(--crl-radius-full);
+}
+
+.crl-listings::-webkit-scrollbar-thumb:hover,
+.crl-chat::-webkit-scrollbar-thumb:hover {
+  background: var(--crl-neutral-300);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced Motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  #can-rent-lah-sidebar * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
 
 @media (max-width: 560px) {
   #can-rent-lah-sidebar {

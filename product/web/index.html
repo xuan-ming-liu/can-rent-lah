@@ -3,144 +3,167 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Can Rent Lah - 新加坡租房 AI 工作台</title>
+  <title>Can Rent Lah — 新加坡租房 AI 工作台</title>
   <link rel="stylesheet" href="/styles.css">
+  <!-- Preload fonts for faster rendering -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- GSAP Core -->
+  <script src="/lib/gsap.min.js" defer></script>
+  <script src="/lib/ScrollTrigger.min.js" defer></script>
+  <script src="/lib/TextPlugin.min.js" defer></script>
+  <style>
+    /* Prevent FOUC — keep auth card invisible until JS runs */
+    .js-loading .auth-card,
+    .js-loading .app-shell { opacity: 0; }
+  </style>
+  <script>
+    document.documentElement.classList.add('js-loading');
+    window.addEventListener('DOMContentLoaded', function() {
+      document.documentElement.classList.remove('js-loading');
+    });
+  </script>
 </head>
 <body>
-<main id="authScreen" class="auth-screen">
-  <section class="auth-card">
-    <div class="brand-mark">Can Rent Lah</div>
-    <h1>新加坡租房 AI 工作台</h1>
-    <p>给中国留学生用的找房助手。你说自然语言需求，插件在 PropertyGuru 页面执行搜索，结果回到这里分析和沉淀。</p>
-    <div id="loginError" class="alert hidden"></div>
-    <form id="loginForm" class="stack-form">
-      <label>邮箱
-        <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email">
-      </label>
-      <label>密码
-        <input id="passwordInput" type="password" placeholder="至少 6 位" autocomplete="current-password">
-      </label>
-      <button type="submit">登录 / 注册</button>
-    </form>
-    <p class="fine-print">测试阶段：没有账号时会自动注册。后续再接激活码和套餐权限。</p>
-  </section>
-</main>
-
-<main id="mainScreen" class="app-shell hidden">
-  <header class="topbar">
-    <div>
+  <!-- Auth Screen -->
+  <main id="authScreen" class="auth-screen">
+    <section class="auth-card">
       <div class="brand-mark">Can Rent Lah</div>
-      <p>租房任务、房源收藏、联系话术和合同审查</p>
-    </div>
-    <div class="topbar-actions">
-      <span id="accountBadge" class="account-badge"></span>
-      <a class="secondary small" href="/contract.html">合同审查</a>
-      <button id="settingsBtn" class="secondary small" type="button">画像设置</button>
-      <button id="logoutBtn" class="ghost small" type="button">退出</button>
-    </div>
-  </header>
+      <h1>新加坡租房 AI 工作台</h1>
+      <p class="subtitle">给中国留学生用的找房助手。你说自然语言需求，插件在 PropertyGuru 页面执行搜索，结果回到这里分析和沉淀。</p>
+      <div id="loginError" class="alert hidden"></div>
+      <form id="loginForm" class="stack-form" autocomplete="on">
+        <label>邮箱
+          <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email">
+        </label>
+        <label>密码
+          <input id="passwordInput" type="password" placeholder="至少 6 位" autocomplete="current-password">
+        </label>
+        <button type="submit">登录 / 注册</button>
+      </form>
+      <p class="fine-print">测试阶段：没有账号时会自动注册。后续再接激活码和套餐权限。</p>
+    </section>
+  </main>
 
-  <section class="workspace">
-    <aside class="side-panel">
-      <h2>使用流程</h2>
-      <ol class="steps">
-        <li><span>1</span>在这里说清楚租房需求</li>
-        <li><span>2</span>系统创建搜索任务并打开 PropertyGuru</li>
-        <li><span>3</span>Chrome 插件在你的浏览器里读取房源</li>
-        <li><span>4</span>AI 回到工作台给出推荐和风险点</li>
-      </ol>
-      <div class="note-box">
-        <strong>为什么要插件？</strong>
-        <p>服务器不直接抓 PropertyGuru，数据由用户浏览器读取，结果再回传给工作台。</p>
+  <!-- Main App Shell -->
+  <main id="mainScreen" class="app-shell hidden">
+    <header class="topbar">
+      <div>
+        <div class="brand-mark">Can Rent Lah</div>
+        <p>租房任务、房源收藏、联系话术和合同审查</p>
       </div>
-    </aside>
+      <div class="topbar-actions">
+        <span id="accountBadge" class="account-badge"></span>
+        <a class="secondary small" href="/contract.html">合同审查</a>
+        <button id="settingsBtn" class="secondary small" type="button">画像设置</button>
+        <button id="logoutBtn" class="ghost small" type="button">退出</button>
+      </div>
+    </header>
 
-    <section class="chat-panel">
-      <div class="panel-head">
-        <div>
+    <section class="workspace">
+      <!-- Left sidebar: guide -->
+      <aside class="side-panel">
+        <h2>使用流程</h2>
+        <ol class="steps">
+          <li><span>1</span>在这里说清楚租房需求</li>
+          <li><span>2</span>系统创建搜索任务并打开 PropertyGuru</li>
+          <li><span>3</span>Chrome 插件在你的浏览器里读取房源</li>
+          <li><span>4</span>AI 回到工作台给出推荐和风险点</li>
+        </ol>
+        <div class="note-box">
+          <strong>为什么要插件？</strong>
+          <p>服务器不直接抓 PropertyGuru，数据由用户浏览器读取，结果再回传给工作台。</p>
+        </div>
+      </aside>
+
+      <!-- Center: chat -->
+      <section class="chat-panel">
+        <div class="panel-head">
           <h1>找房任务</h1>
           <p>直接输入自然语言；信息不够时，Agent 会先追问，不会急着搜索。</p>
         </div>
-      </div>
-      <div id="chatLog" class="chat-log"></div>
-      <form id="chatForm" class="composer">
-        <textarea id="chatInput" rows="3" placeholder="例如：NUS 附近，预算 1500 新币以内，想要单间，通勤 35 分钟内，最好能煮饭"></textarea>
-        <button type="submit">创建任务</button>
-      </form>
-    </section>
+        <div id="chatLog" class="chat-log"></div>
+        <form id="chatForm" class="composer">
+          <textarea id="chatInput" rows="3" placeholder="例如：NUS 附近，预算 1500 新币以内，想要单间，通勤 35 分钟内，最好能煮饭"></textarea>
+          <button type="submit">创建任务</button>
+        </form>
+      </section>
 
-    <aside class="listings-sidebar">
-      <div class="panel-head compact">
-        <div>
-          <h2>收藏房源</h2>
-          <p>推荐结果里点收藏后会出现在这里。</p>
+      <!-- Right sidebar: saved listings -->
+      <aside class="listings-sidebar">
+        <div class="panel-head compact">
+          <div>
+            <h2>收藏房源</h2>
+            <p>推荐结果里点收藏后会出现在这里。</p>
+          </div>
         </div>
+        <div id="listingGrid" class="listing-grid"></div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal hidden">
+    <section class="modal-card">
+      <div class="modal-head">
+        <div>
+          <h2>画像设置</h2>
+          <p>这些信息会作为每次搜索和分析的默认偏好。</p>
+        </div>
+        <button id="closeSettingsBtn" class="ghost small" type="button">关闭</button>
       </div>
-      <div id="listingGrid" class="listing-grid"></div>
-    </aside>
-  </section>
-</main>
+      <div class="modal-body">
+        <section class="settings-section">
+          <h3>账号信息</h3>
+          <div id="settingsInfo" class="settings-info"></div>
+        </section>
 
-<div id="settingsModal" class="modal hidden">
-  <section class="modal-card">
-    <div class="modal-head">
-      <div>
-        <h2>画像设置</h2>
-        <p>这些信息会作为每次搜索和分析的默认偏好。</p>
+        <section class="settings-section">
+          <h3>修改密码</h3>
+          <form id="passwordForm" class="stack-form">
+            <label>原密码 <input id="oldPasswordInput" type="password" placeholder="输入原密码"></label>
+            <label>新密码 <input id="newPasswordInput" type="password" placeholder="至少 6 位"></label>
+            <p id="passwordMsg" class="settings-msg hidden"></p>
+            <button type="submit">更新密码</button>
+          </form>
+        </section>
+
+        <section class="settings-section">
+          <h3>租房偏好</h3>
+          <form id="profileForm" class="stack-form">
+            <label>学校
+              <select id="profileSchool">
+                <option value="">未选择</option>
+                <option value="NUS">NUS</option>
+                <option value="NTU">NTU</option>
+                <option value="SMU">SMU</option>
+                <option value="SUTD">SUTD</option>
+                <option value="SIM">SIM</option>
+                <option value="Kaplan">Kaplan</option>
+                <option value="NAFA">NAFA</option>
+              </select>
+            </label>
+            <label>月预算 SGD <input id="profileBudget" type="number" placeholder="例如 1800"></label>
+            <label>房型偏好
+              <select id="profileType">
+                <option value="">不限</option>
+                <option value="hdb-room">HDB 单间</option>
+                <option value="hdb">HDB 整租</option>
+                <option value="condo">Condo</option>
+                <option value="apartment">Apartment</option>
+              </select>
+            </label>
+            <label>首选区域 <input id="profileAreas" type="text" placeholder="例如 Clementi, Dover，用逗号分隔"></label>
+            <label>不能接受 <input id="profileDealbreakers" type="text" placeholder="例如 没空调、一楼、西晒，用逗号分隔"></label>
+            <p id="profileMsg" class="settings-msg hidden"></p>
+            <button type="submit">保存偏好</button>
+          </form>
+        </section>
       </div>
-      <button id="closeSettingsBtn" class="ghost small" type="button">关闭</button>
-    </div>
-    <div class="modal-body">
-      <section class="settings-section">
-        <h3>账号信息</h3>
-        <div id="settingsInfo" class="settings-info"></div>
-      </section>
+    </section>
+  </div>
 
-      <section class="settings-section">
-        <h3>修改密码</h3>
-        <form id="passwordForm" class="stack-form">
-          <label>原密码 <input id="oldPasswordInput" type="password" placeholder="输入原密码"></label>
-          <label>新密码 <input id="newPasswordInput" type="password" placeholder="至少 6 位"></label>
-          <p id="passwordMsg" class="settings-msg hidden"></p>
-          <button type="submit">更新密码</button>
-        </form>
-      </section>
-
-      <section class="settings-section">
-        <h3>租房偏好</h3>
-        <form id="profileForm" class="stack-form">
-          <label>学校
-            <select id="profileSchool">
-              <option value="">未选择</option>
-              <option value="NUS">NUS</option>
-              <option value="NTU">NTU</option>
-              <option value="SMU">SMU</option>
-              <option value="SUTD">SUTD</option>
-              <option value="SIM">SIM</option>
-              <option value="Kaplan">Kaplan</option>
-              <option value="NAFA">NAFA</option>
-            </select>
-          </label>
-          <label>月预算 SGD <input id="profileBudget" type="number" placeholder="例如 1800"></label>
-          <label>房型偏好
-            <select id="profileType">
-              <option value="">不限</option>
-              <option value="hdb-room">HDB 单间</option>
-              <option value="hdb">HDB 整租</option>
-              <option value="condo">Condo</option>
-              <option value="apartment">Apartment</option>
-            </select>
-          </label>
-          <label>首选区域 <input id="profileAreas" type="text" placeholder="例如 Clementi, Dover，用逗号分隔"></label>
-          <label>不能接受 <input id="profileDealbreakers" type="text" placeholder="例如 没空调、一楼、西晒，用逗号分隔"></label>
-          <p id="profileMsg" class="settings-msg hidden"></p>
-          <button type="submit">保存偏好</button>
-        </form>
-      </section>
-    </div>
-  </section>
-</div>
-
-<script type="module" src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

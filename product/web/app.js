@@ -1,3 +1,18 @@
+/* ==========================================================================
+   Can Rent Lah — Web Dashboard
+   GSAP-powered animations + Impeccable design principles
+   ========================================================================== */
+
+// ---------------------------------------------------------------------------
+// GSAP Plugin Registration
+// ---------------------------------------------------------------------------
+
+gsap.registerPlugin(TextPlugin);
+
+// ---------------------------------------------------------------------------
+// Config & State
+// ---------------------------------------------------------------------------
+
 const API_BASE = window.location.origin;
 const tokenKey = 'canRentLahToken';
 
@@ -9,6 +24,10 @@ const state = {
   lastTaskResult: null,
   conversationLog: [],
 };
+
+// ---------------------------------------------------------------------------
+// DOM Helpers
+// ---------------------------------------------------------------------------
 
 const $ = (selector) => document.querySelector(selector);
 const authScreen = $('#authScreen');
@@ -37,6 +56,10 @@ const profileType = $('#profileType');
 const profileAreas = $('#profileAreas');
 const profileDealbreakers = $('#profileDealbreakers');
 
+// ---------------------------------------------------------------------------
+// API
+// ---------------------------------------------------------------------------
+
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -60,14 +83,131 @@ function setToken(token) {
   window.postMessage({ source: 'can-rent-lah-web', token }, window.location.origin);
 }
 
+// ---------------------------------------------------------------------------
+// GSAP Animation Presets
+// ---------------------------------------------------------------------------
+
+const ANIM = {
+  // Entrance: fade + slide up, with optional stagger
+  fadeUp(el, { delay = 0, duration = 0.5, y = 16, stagger = 0, clearProps } = {}) {
+    const props = { opacity: 0, y, duration, delay, ease: 'power3.out' };
+    if (stagger) props.stagger = stagger;
+    if (clearProps) props.clearProps = clearProps;
+    return gsap.from(el, props);
+  },
+
+  // Entrance: fade + slide from right
+  fadeRight(el, { delay = 0, duration = 0.4, x = 20 } = {}) {
+    return gsap.from(el, { opacity: 0, x, duration, delay, ease: 'power3.out' });
+  },
+
+  // Entrance: fade + slide from left
+  fadeLeft(el, { delay = 0, duration = 0.4, x = -20 } = {}) {
+    return gsap.from(el, { opacity: 0, x, duration, delay, ease: 'power3.out' });
+  },
+
+  // Scale entrance (for modals, popups)
+  scaleIn(el, { delay = 0, duration = 0.4 } = {}) {
+    return gsap.from(el, {
+      opacity: 0, scale: 0.94, duration, delay,
+      ease: 'back.out(1.4)',
+    });
+  },
+
+  // Staggered children entrance
+  staggerChildren(parent, selector, { delay = 0, stagger = 0.06, y = 12 } = {}) {
+    return gsap.from(parent.querySelectorAll(selector), {
+      opacity: 0, y, duration: 0.45, stagger, delay,
+      ease: 'power3.out',
+    });
+  },
+
+  // Hover lift (return a cleanup function)
+  hoverLift(el, { y = -3, scale = 1.01, duration = 0.3 } = {}) {
+    const enter = () => gsap.to(el, { y, scale, duration, ease: 'power2.out' });
+    const leave = () => gsap.to(el, { y: 0, scale: 1, duration, ease: 'power2.out' });
+    el.addEventListener('mouseenter', enter);
+    el.addEventListener('mouseleave', leave);
+    return () => { el.removeEventListener('mouseenter', enter); el.removeEventListener('mouseleave', leave); };
+  },
+
+  // Shake (for errors)
+  shake(el, { x = 8, duration = 0.4 } = {}) {
+    return gsap.fromTo(el, { x: -x }, { x, duration: 0.08, repeat: 3, yoyo: true, ease: 'power2.inOut', clearProps: 'x' });
+  },
+
+  // Pulse (for success indicators)
+  pulse(el, { scale = 1.03, duration = 0.3 } = {}) {
+    return gsap.fromTo(el, { scale: 1 }, { scale, duration: duration / 2, yoyo: true, repeat: 1, ease: 'power2.inOut' });
+  },
+
+  // Reveal text word by word (ReactBits-inspired)
+  revealText(el, { delay = 0, duration = 0.03 } = {}) {
+    const text = el.textContent;
+    el.textContent = '';
+    const chars = text.split('');
+    chars.forEach((char) => {
+      const span = document.createElement('span');
+      span.textContent = char === ' ' ? ' ' : char;
+      span.style.display = 'inline-block';
+      el.appendChild(span);
+    });
+    return gsap.from(el.querySelectorAll('span'), {
+      opacity: 0, y: 8, duration, stagger: 0.015, delay, ease: 'power2.out',
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Page Transition Animations
+// ---------------------------------------------------------------------------
+
+function animateAuthEntrance() {
+  const card = authScreen.querySelector('.auth-card');
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  tl.from(card, { opacity: 0, y: 32, scale: 0.97, duration: 0.6 })
+    .from(card.querySelector('.brand-mark'), { opacity: 0, y: 12, duration: 0.4 }, '-=0.2')
+    .from(card.querySelector('h1'), { opacity: 0, y: 12, duration: 0.4 }, '-=0.15')
+    .from(card.querySelector('.subtitle'), { opacity: 0, y: 8, duration: 0.4 }, '-=0.15')
+    .from(loginForm.querySelectorAll('label'), { opacity: 0, y: 8, stagger: 0.08, duration: 0.35 }, '-=0.1')
+    .from(loginForm.querySelector('button'), { opacity: 0, y: 8, duration: 0.35 }, '-=0.05')
+    .from(card.querySelector('.fine-print'), { opacity: 0, duration: 0.3 }, '-=0.1');
+}
+
+function animateMainEntrance() {
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  tl.from(mainScreen.querySelector('.topbar'), { opacity: 0, y: -16, duration: 0.4 })
+    .from(mainScreen.querySelector('.side-panel'), { opacity: 0, x: -24, duration: 0.5 }, '-=0.15')
+    .from(mainScreen.querySelector('.panel-head'), { opacity: 0, y: 12, duration: 0.4 }, '-=0.2')
+    .from(mainScreen.querySelector('.composer'), { opacity: 0, y: 16, duration: 0.4 }, '-=0.15')
+    .from(mainScreen.querySelector('.listings-sidebar'), { opacity: 0, x: 24, duration: 0.5 }, '-=0.3');
+}
+
+// ---------------------------------------------------------------------------
+// UI Helpers
+// ---------------------------------------------------------------------------
+
 function showScreen(loggedIn) {
-  authScreen.classList.toggle('hidden', loggedIn);
-  mainScreen.classList.toggle('hidden', !loggedIn);
+  if (loggedIn) {
+    authScreen.classList.add('hidden');
+    mainScreen.classList.remove('hidden');
+    requestAnimationFrame(() => animateMainEntrance());
+  } else {
+    authScreen.classList.remove('hidden');
+    mainScreen.classList.add('hidden');
+    requestAnimationFrame(() => animateAuthEntrance());
+  }
 }
 
 function showError(text) {
   loginError.textContent = text || '';
   loginError.classList.toggle('hidden', !text);
+  if (text) {
+    gsap.fromTo(loginError, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+    ANIM.shake(loginError);
+  }
 }
 
 function escapeHtml(value) {
@@ -115,9 +255,15 @@ function renderMarkdown(markdown) {
   return html.join('');
 }
 
+// ---------------------------------------------------------------------------
+// Messages with GSAP entrance
+// ---------------------------------------------------------------------------
+
 function addMessage(role, text) {
   const item = document.createElement('div');
   item.className = `message ${role}`;
+  item.style.opacity = '0';
+
   if (role === 'assistant') {
     item.innerHTML = renderMarkdown(text);
     attachSaveButtons(item);
@@ -126,8 +272,19 @@ function addMessage(role, text) {
   } else {
     item.textContent = text;
   }
+
   chatLog.append(item);
   chatLog.scrollTop = chatLog.scrollHeight;
+
+  // Animate entrance
+  const fromX = role === 'user' ? 32 : role === 'system' ? 0 : -20;
+  const fromY = role === 'system' ? -8 : 12;
+
+  gsap.fromTo(item,
+    { opacity: 0, x: fromX, y: fromY },
+    { opacity: 1, x: 0, y: 0, duration: 0.4, ease: 'power3.out' }
+  );
+
   return item;
 }
 
@@ -137,16 +294,32 @@ function attachSaveButtons(container) {
     const listing = ranked[index] || ranked.find((item) => item.url && link.href.includes(String(item.id || '')));
     if (!listing) return;
     const button = document.createElement('button');
-    button.className = 'save-btn';
+    button.className = 'save-btn pressable';
     button.type = 'button';
     button.textContent = '收藏这个房源';
     button.dataset.listing = JSON.stringify(listing);
     link.after(document.createTextNode(' '), button);
+    ANIM.hoverLift(button, { y: -2 });
   });
 }
 
 function emptyListingsHtml() {
-  return '<div class="empty-state">还没有收藏房源。<br>搜索完成后，在推荐结果里点“收藏这个房源”。</div>';
+  return '<div class="empty-state">还没有收藏房源。<br>搜索完成后，在推荐结果里点"收藏这个房源"。</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Listings
+// ---------------------------------------------------------------------------
+
+async function refreshListings() {
+  if (!state.token) return;
+  try {
+    const data = await api('/api/listings');
+    state.listings = data.listings || [];
+    renderListings();
+  } catch {
+    renderListings();
+  }
 }
 
 function renderListings() {
@@ -155,8 +328,8 @@ function renderListings() {
     return;
   }
 
-  listingGrid.innerHTML = state.listings.map((listing) => `
-    <article class="listing-card">
+  listingGrid.innerHTML = state.listings.map((listing, i) => `
+    <article class="listing-card card-lift" style="opacity:0">
       <div class="listing-card-head">
         <strong>${escapeHtml(listing.title || '未命名房源')}</strong>
         <button class="delete-btn" data-id="${escapeHtml(listing.id)}" type="button" title="删除">×</button>
@@ -172,7 +345,7 @@ function renderListings() {
       ${listing.cons ? `<div class="listing-cons">注意事项：${escapeHtml(listing.cons)}</div>` : ''}
       <div class="listing-card-actions">
         ${listing.url ? `<a class="listing-link" href="${escapeHtml(listing.url)}" target="_blank" rel="noreferrer">查看原房源</a>` : ''}
-        <button class="contact-btn" type="button"
+        <button class="contact-btn pressable" type="button"
           data-title="${escapeHtml(listing.title || '')}"
           data-price="${escapeHtml(listing.price || '')}"
           data-address="${escapeHtml(listing.address || '')}"
@@ -181,18 +354,18 @@ function renderListings() {
       </div>
     </article>
   `).join('');
+
+  // Staggered card entrance
+  const cards = listingGrid.querySelectorAll('.listing-card');
+  gsap.fromTo(cards,
+    { opacity: 0, y: 16 },
+    { opacity: 1, y: 0, stagger: 0.05, duration: 0.4, ease: 'power3.out' }
+  );
 }
 
-async function refreshListings() {
-  if (!state.token) return;
-  try {
-    const data = await api('/api/listings');
-    state.listings = data.listings || [];
-    renderListings();
-  } catch {
-    renderListings();
-  }
-}
+// ---------------------------------------------------------------------------
+// Task Polling
+// ---------------------------------------------------------------------------
 
 async function pollTaskStatus(taskId) {
   let polls = 0;
@@ -228,6 +401,10 @@ async function pollTaskStatus(taskId) {
   }, 4000);
 }
 
+// ---------------------------------------------------------------------------
+// Chat / Task Creation
+// ---------------------------------------------------------------------------
+
 function buildTaskPrompt(message) {
   const history = state.conversationLog
     .slice(-8)
@@ -244,12 +421,15 @@ async function handleChatMessage(message) {
   state.conversationLog.push({ role: '用户', text });
 
   try {
-    const pending = addMessage('system', '正在理解需求并创建任务...');
+    const pending = addMessage('system', '⏳ 正在理解需求并创建任务...');
     const data = await api('/api/tasks', {
       method: 'POST',
       body: JSON.stringify({ question: buildTaskPrompt(text) }),
     });
-    pending.remove();
+
+    // Fade out pending message
+    gsap.to(pending, { opacity: 0, y: -8, duration: 0.25, ease: 'power2.in',
+      onComplete: () => pending.remove() });
 
     if (data.needsClarify) {
       state.conversationLog.push({ role: 'Agent', text: data.question });
@@ -278,6 +458,10 @@ async function handleChatMessage(message) {
     addMessage('system', `出错了：${error.message}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Login / Boot
+// ---------------------------------------------------------------------------
 
 async function loadCompletedTasks() {
   try {
@@ -318,6 +502,7 @@ function showMsg(el, text, type) {
   el.textContent = text;
   el.className = `settings-msg ${type}`;
   el.classList.remove('hidden');
+  gsap.fromTo(el, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
 }
 
 async function loadProfile() {
@@ -342,6 +527,10 @@ async function bootLoggedIn() {
   await checkActiveTasks();
 }
 
+// ---------------------------------------------------------------------------
+// Event Handlers
+// ---------------------------------------------------------------------------
+
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const email = emailInput.value.trim();
@@ -349,6 +538,11 @@ loginForm.addEventListener('submit', async (event) => {
   if (!email.includes('@')) { showError('请输入有效邮箱。'); return; }
   if (!password || password.length < 6) { showError('密码至少 6 位。'); return; }
   showError('');
+
+  const btn = loginForm.querySelector('button');
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+
   try {
     let data;
     try {
@@ -364,12 +558,18 @@ loginForm.addEventListener('submit', async (event) => {
     addMessage('assistant', '登录成功。你可以直接发起找房任务，例如：NUS 附近 1500 新币以内单间。');
   } catch (error) {
     showError(error.message || '登录失败。');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '登录 / 注册';
   }
 });
 
 chatForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  const btn = chatForm.querySelector('button');
+  btn.disabled = true;
   await handleChatMessage(chatInput.value);
+  btn.disabled = false;
 });
 
 chatLog.addEventListener('click', async (event) => {
@@ -380,22 +580,29 @@ chatLog.addEventListener('click', async (event) => {
   if (!listing) return;
   try {
     await api('/api/listings/save', { method: 'POST', body: JSON.stringify({ listing }) });
-    button.textContent = '已收藏';
+    button.textContent = '已收藏 ✓';
     button.classList.add('saved');
+    ANIM.pulse(button);
     await refreshListings();
   } catch {
     button.textContent = '收藏失败';
+    ANIM.shake(button);
   }
 });
 
 listingGrid.addEventListener('click', async (event) => {
   const deleteButton = event.target.closest('.delete-btn');
   if (deleteButton) {
+    const card = deleteButton.closest('.listing-card');
     try {
       await api(`/api/listings/${deleteButton.dataset.id}`, { method: 'DELETE' });
       state.listings = state.listings.filter((item) => item.id !== deleteButton.dataset.id);
-      renderListings();
-    } catch {}
+      // Animate card out before removing
+      gsap.to(card, { opacity: 0, x: 40, height: 0, paddingTop: 0, paddingBottom: 0, marginBottom: 0, duration: 0.3, ease: 'power2.in',
+        onComplete: () => renderListings() });
+    } catch {
+      ANIM.shake(card);
+    }
     return;
   }
 
@@ -413,22 +620,53 @@ listingGrid.addEventListener('click', async (event) => {
     };
     const data = await api('/api/contact/message', { method: 'POST', body: JSON.stringify({ listing }) });
     addMessage('assistant', `**联系中介话术**\n\n\`${data.message}\``);
+    ANIM.pulse(contactButton);
   } catch (error) {
     addMessage('system', `生成失败：${error.message}`);
+    ANIM.shake(contactButton);
   } finally {
     contactButton.disabled = false;
     contactButton.textContent = '生成联系话术';
   }
 });
 
+// ---------------------------------------------------------------------------
+// Settings Modal (GSAP transitions)
+// ---------------------------------------------------------------------------
+
+function openModal() {
+  settingsModal.classList.remove('hidden');
+  const card = settingsModal.querySelector('.modal-card');
+  gsap.fromTo(settingsModal,
+    { opacity: 0 },
+    { opacity: 1, duration: 0.25, ease: 'power2.out' }
+  );
+  ANIM.scaleIn(card, { delay: 0.05 });
+}
+
+function closeModal() {
+  const card = settingsModal.querySelector('.modal-card');
+  gsap.to(card, { opacity: 0, scale: 0.96, duration: 0.2, ease: 'power2.in' });
+  gsap.to(settingsModal, { opacity: 0, duration: 0.2, ease: 'power2.in',
+    onComplete: () => settingsModal.classList.add('hidden') });
+}
+
 settingsBtn.addEventListener('click', async () => {
   fillAccountInfo();
-  settingsModal.classList.remove('hidden');
+  openModal();
   await loadProfile();
 });
-closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+closeSettingsBtn.addEventListener('click', closeModal);
 settingsModal.addEventListener('click', (event) => {
-  if (event.target === settingsModal) settingsModal.classList.add('hidden');
+  if (event.target === settingsModal) closeModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
+    closeModal();
+  }
 });
 
 passwordForm.addEventListener('submit', async (event) => {
@@ -440,8 +678,10 @@ passwordForm.addEventListener('submit', async (event) => {
     });
     showMsg(passwordMsg, '密码已更新。', 'success');
     passwordForm.reset();
+    ANIM.pulse(passwordForm.querySelector('button'));
   } catch (error) {
     showMsg(passwordMsg, error.message, 'error');
+    ANIM.shake(passwordForm.querySelector('button'));
   }
 });
 
@@ -461,8 +701,10 @@ profileForm.addEventListener('submit', async (event) => {
       }),
     });
     showMsg(profileMsg, '偏好已保存。', 'success');
+    ANIM.pulse(profileForm.querySelector('button'));
   } catch (error) {
     showMsg(profileMsg, error.message, 'error');
+    ANIM.shake(profileForm.querySelector('button'));
   }
 });
 
@@ -475,7 +717,12 @@ logoutBtn.addEventListener('click', () => {
   showScreen(false);
 });
 
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
 renderListings();
+
 if (state.token) {
   try {
     await bootLoggedIn();
