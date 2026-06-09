@@ -20,11 +20,9 @@ import {
   createTask, getTask, getUserTasks, updateTaskFull,
   getProfile, saveProfile, getLog, appendLog,
 } from './db.mjs';
+import { config, checkConfig } from './config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(__dirname, '..');
-const webDir = path.join(rootDir, 'web');
-const port = Number(process.env.PORT || 8787);
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -555,8 +553,8 @@ async function handleApi(req, res, pathname) {
 
 async function serveStatic(req, res, pathname) {
   const filePath = pathname === '/' ? '/index.html' : pathname;
-  const resolved = path.normalize(path.join(webDir, filePath));
-  if (!resolved.startsWith(webDir)) { res.writeHead(403); res.end(); return; }
+  const resolved = path.normalize(path.join(config.webDir, filePath));
+  if (!resolved.startsWith(config.webDir)) { res.writeHead(403); res.end(); return; }
   try {
     const data = await readFile(resolved);
     const ext = path.extname(resolved);
@@ -564,7 +562,7 @@ async function serveStatic(req, res, pathname) {
     res.end(data);
   } catch {
     try {
-      const index = await readFile(path.join(webDir, 'index.html'));
+      const index = await readFile(path.join(config.webDir, 'index.html'));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(index);
     } catch { res.writeHead(404); res.end('Not found'); }
@@ -633,18 +631,133 @@ function toPublicTask(row) {
 }
 
 // ---------------------------------------------------------------------------
-// Start server
+// Request logging
 // ---------------------------------------------------------------------------
 
+function logRequest(req, res, startTime) {
+  const duration = Date.now() - startTime;
+  const remote = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '-';
+  const method = req.method;
+  const url = req.url || '/';
+  const status = res.statusCode;
+  const level = status >= 500 ? 'ERROR' : status >= 400 ? 'WARN' : 'INFO';
+  const msg = `${new Date().toISOString()} ${level} ${remote} ${method} ${url} ${status} ${duration}ms`;
+  if (level === 'ERROR') console.error(msg);
+  else console.log(msg);
+}
+
+function logError(context, err) {
+  const ts = new Date().toISOString();
+  console.error(`[${ts}] ERROR ${context}: ${err?.message || err}`);
+  if (err?.stack) console.error(err.stack);
+}
+
+// ---------------------------------------------------------------------------
+// Health check
+// ---------------------------------------------------------------------------
+
+async function handleHealth(req, res) {
+  let dbOk = false;
+  try {
+    // dynamic import to get the live db instance
+    const mod = await import('./db.mjs');
+    const row = mod.default?.prepare('SELECT 1 AS ok').get();
+    dbOk = Boolean(row?.ok);
+  } catch {}
+
+  const code = dbOk ? 200 : 503;
+  res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({
+    status: dbOk ? 'ok' : 'degraded',
+    uptime: Math.floor(process.uptime()),
+    db: dbOk ? 'ok' : 'error',
+    aiProvider: config.aiProvider,
+    nodeEnv: config.nodeEnv,
+  }));
+}
+
 const server = createServer(async (req, res) => {
+  const startTime = Date.now();
   const url = new URL(req.url || '/', `http://${req.headers.host}`);
-  if (url.pathname.startsWith('/api/')) {
-    await handleApi(req, res, url.pathname);
-    return;
+
+  try {
+    if (url.pathname === '/api/health') {
+      await handleHealth(req, res);
+    } else if (url.pathname.startsWith('/api/')) {
+      await handleApi(req, res, url.pathname);
+    } else {
+      await serveStatic(req, res, url.pathname);
+    }
+  } catch (err) {
+    logError(`unhandled ${req.method} ${url.pathname}`, err);
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Internal server error' }));
+    }
   }
-  await serveStatic(req, res, url.pathname);
+
+  logRequest(req, res, startTime);
 });
 
-server.listen(port, () => {
-  console.log(`Can Rent Lah running at http://localhost:${port}`);
+// ---------------------------------------------------------------------------
+// Crash handlers — log + exit so PM2 can restart
+// ---------------------------------------------------------------------------
+
+process.on('uncaughtException', (err) => {
+  logError('uncaughtException', err);
+  // Give log a moment to flush, then exit
+  setTimeout(() => process.exit(1), 500);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logError('unhandledRejection', reason);
+  // Don't exit — unhandled rejections shouldn't crash the process in modern Node,
+  // but we still log them aggressively
+});
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+
+function shutdown(signal) {
+  console.log(`\n[${new Date().toISOString()}] ${signal} received — shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed.');
+    // Close SQLite
+    try {
+      const mod = import('./db.mjs');
+      mod.then((m) => {
+        if (m.default?.close) {
+          m.default.close();
+          console.log('Database closed.');
+        }
+        process.exit(0);
+      }).catch(() => process.exit(0));
+    } catch {
+      process.exit(0);
+    }
+  });
+
+  // Force exit after 10s
+  setTimeout(() => {
+    console.error('Forced shutdown after 10s timeout.');
+    process.exit(1);
+  }, 10_000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// ---------------------------------------------------------------------------
+// Startup
+// ---------------------------------------------------------------------------
+
+const { ok, warnings } = checkConfig();
+if (!ok) {
+  for (const w of warnings) console.warn(w);
+}
+
+server.listen(config.port, () => {
+  console.log(`Can Rent Lah running at http://localhost:${config.port}`);
+  console.log(`Mode: ${config.nodeEnv}  |  AI: ${config.aiProvider}/${config.aiModel}  |  DB: ${config.dbPath}`);
 });

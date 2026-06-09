@@ -1,42 +1,39 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readProfile, readLog, appendLog } from './profile.mjs';
+import { config } from './config.mjs';
 
 // ---------------------------------------------------------------------------
 // 多 Provider 支持：Anthropic SDK + DeepSeek/OpenAI (OpenAI 兼容 API)
 // ---------------------------------------------------------------------------
 
 function getProvider() {
-  const provider = (process.env.AI_PROVIDER || 'anthropic').toLowerCase();
-
-  if (provider === 'deepseek') {
+  if (config.aiProvider === 'deepseek') {
     return {
       type: 'deepseek',
-      apiKey: process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY,
-      model: process.env.AI_MODEL || 'deepseek-chat',
-      url: process.env.AI_BASE_URL || 'https://api.deepseek.com/chat/completions',
+      apiKey: config.deepseekApiKey,
+      model: config.aiModel,
+      url: config.aiBaseUrl || 'https://api.deepseek.com/chat/completions',
     };
   }
 
-  if (provider === 'openai') {
+  if (config.aiProvider === 'openai') {
     return {
       type: 'openai',
-      apiKey: process.env.OPENAI_API_KEY || process.env.AI_API_KEY,
-      model: process.env.AI_MODEL || 'gpt-4.1-mini',
-      url: process.env.AI_BASE_URL || 'https://api.openai.com/v1/chat/completions',
+      apiKey: config.openaiApiKey,
+      model: config.aiModel,
+      url: config.aiBaseUrl || 'https://api.openai.com/v1/chat/completions',
     };
   }
 
   // Anthropic (default)
   return {
     type: 'anthropic',
-    apiKey: process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY,
-    model: process.env.AI_MODEL || 'claude-sonnet-4-6',
+    apiKey: config.anthropicApiKey,
+    model: config.aiModel,
   };
 }
 
 function hasProvider() {
-  const p = getProvider();
-  return Boolean(p.apiKey);
+  return Boolean(getProvider().apiKey);
 }
 
 async function chat({ system, messages, maxTokens = 2048 }) {
@@ -85,7 +82,7 @@ async function chat({ system, messages, maxTokens = 2048 }) {
   return data.choices?.[0]?.message?.content || '';
 }
 
-const MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
+// config imported at top; MODEL replaced by config.aiModel in getProvider()
 
 // ---------------------------------------------------------------------------
 // School → area mapping
