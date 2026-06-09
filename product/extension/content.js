@@ -476,16 +476,24 @@ function renderTaskBar(tasks) {
       <strong>${TEXT.taskPending}</strong>
       <span>${tasks.length} 个</span>
     </div>
-    ${tasks.slice(0, 3).map((task) => `
+    ${tasks.slice(0, 3).map((task) => {
+      const reason = task.intent?.reason || '';
+      const strategy = task.rounds?.[task.currentRound || 0]?.strategy || '';
+      return `
       <div class="crl-task-item" style="opacity:0">
         <div class="crl-task-question">${escapeHtml(task.question.slice(0, 86))}${task.question.length > 86 ? '...' : ''}</div>
+        ${reason ? `<div class="crl-task-reason">💭 ${escapeHtml(reason)}</div>` : ''}
+        <div class="crl-task-actions">
+          ${strategy ? `<span class="crl-task-strategy">${escapeHtml(strategy)}</span>` : ''}
+          <button class="crl-task-open-btn" data-url="${escapeHtml(buildSearchUrl(task))}" type="button">打开搜索页</button>
+        </div>
         <div class="crl-task-meta">
           <span>${task.status === 'searching' ? '执行中' : '等待执行'}</span>
           <span>${task.totalCollected || 0} 个房源</span>
           <span>第 ${(task.currentRound || 0) + 1} 轮</span>
         </div>
       </div>
-    `).join('')}
+    `}).join('')}
   `;
 
   if (bar.classList.contains('hidden')) {
@@ -495,8 +503,26 @@ function renderTaskBar(tasks) {
     }
   }
 
+  // Bind open-page buttons
+  bar.querySelectorAll('.crl-task-open-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.open(btn.dataset.url, '_blank', 'noreferrer');
+    });
+  });
+
   // Animate task items in
   animate.staggerChildren(bar, '.crl-task-item', { stagger: 0.06, y: 6 });
+}
+
+function buildSearchUrl(task) {
+  if (!task) return 'https://www.propertyguru.com.sg/property-for-rent';
+  const intent = task.intent || {};
+  const location = intent.location || '';
+  const maxPrice = intent.maxPrice ? `&maxprice=${intent.maxPrice}` : '';
+  return location
+    ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(location)}${maxPrice}`
+    : 'https://www.propertyguru.com.sg/property-for-rent';
 }
 
 // ==========================================================================
@@ -672,7 +698,11 @@ async function onChatSubmit(event) {
     }
     if (data.task) {
       const round = data.task.rounds?.[0] || {};
-      addChat('assistant', `任务已创建：**${data.task.question.slice(0, 70)}**\n\n搜索策略：${round.strategy || '自动搜索'}\n搜索页面：${round.instructionCount || round.instructions?.length || 0} 个`);
+      const intent = data.task.intent || {};
+      const searchUrl = intent.location
+        ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(intent.location)}${intent.maxPrice ? `&maxprice=${intent.maxPrice}` : ''}`
+        : 'https://www.propertyguru.com.sg/property-for-rent';
+      addChat('assistant', `任务已创建：**${data.task.question.slice(0, 70)}**\n\n搜索策略：${round.strategy || '自动搜索'}\n搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n<a href="${searchUrl}" target="_blank" style="display:inline-block;padding:5px 10px;background:#0b6f63;color:white;border-radius:6px;text-decoration:none;font-weight:600">打开 PropertyGuru</a>`);
       await fetchAndShowTasks();
     }
   } catch (error) {
