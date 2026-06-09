@@ -9,17 +9,11 @@
   },
   "host_permissions": [
     "https://www.propertyguru.com.sg/*",
-    "http://localhost:8787/*",
-    "http://101.47.73.151:8787/*",
-    "https://app.canrentlah.com/*"
+    "<all_urls>"
   ],
   "content_scripts": [
     {
-      "matches": [
-        "http://localhost:8787/*",
-        "http://101.47.73.151:8787/*",
-        "https://app.canrentlah.com/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["auth-sync.js"],
       "run_at": "document_idle"
     },

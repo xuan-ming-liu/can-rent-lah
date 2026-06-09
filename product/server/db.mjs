@@ -32,7 +32,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     token       TEXT PRIMARY KEY,
     email       TEXT NOT NULL REFERENCES users(email),
-    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at  TEXT NOT NULL DEFAULT (datetime('now', '+7 days'))
   );
 
   CREATE TABLE IF NOT EXISTS listings (
@@ -90,6 +91,14 @@ db.exec(`
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// ---------------------------------------------------------------------------
+// Schema migrations (safe to run on existing DBs)
+// ---------------------------------------------------------------------------
+
+try { db.exec("ALTER TABLE sessions ADD COLUMN expires_at TEXT NOT NULL DEFAULT (datetime('now', '+7 days'))"); } catch {}
+try { db.exec("ALTER TABLE listings ADD COLUMN pros TEXT NOT NULL DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE listings ADD COLUMN cons TEXT NOT NULL DEFAULT ''"); } catch {}
 
 // ---------------------------------------------------------------------------
 // Password utils
@@ -157,19 +166,39 @@ export function incrementChatCount(email) {
 // Session operations
 // ---------------------------------------------------------------------------
 
+const SESSION_TTL_DAYS = 7;
+
 export function createSession(email) {
   const token = crypto.randomBytes(24).toString('base64url');
-  db.prepare('INSERT OR REPLACE INTO sessions (token, email) VALUES (?, ?)').run(token, email);
+  db.prepare(
+    'INSERT OR REPLACE INTO sessions (token, email, expires_at) VALUES (?, ?, datetime(\'now\', ?))'
+  ).run(token, email, `+${SESSION_TTL_DAYS} days`);
   return token;
 }
 
 export function getSessionEmail(token) {
-  const row = db.prepare('SELECT email FROM sessions WHERE token = ?').get(token);
+  const row = db.prepare(
+    'SELECT email FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')'
+  ).get(token);
   return row ? row.email : null;
 }
 
 export function deleteSession(token) {
   db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+}
+
+export function cleanupExpiredSessions() {
+  const result = db.prepare(
+    "DELETE FROM sessions WHERE expires_at <= datetime('now')"
+  ).run();
+  return result.changes;
+}
+
+export function cleanupExpiredTasks() {
+  const result = db.prepare(
+    "UPDATE tasks SET status = 'expired' WHERE status IN ('waiting_search', 'searching') AND updated_at < datetime('now', '-30 minutes')"
+  ).run();
+  return result.changes;
 }
 
 // ---------------------------------------------------------------------------

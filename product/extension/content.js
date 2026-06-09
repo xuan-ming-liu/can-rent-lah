@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = 'http://101.47.73.151:8787';
+// apiBase is set by auth-sync.js when user logs in on the web app
 
 const TEXT = {
   requestFailed: '请求失败',
@@ -55,7 +55,11 @@ function callApi(method, path, body) {
       reject(new Error(TEXT.notLoggedIn));
       return;
     }
-    const apiBase = stored.apiBase || DEFAULT_API_BASE;
+    const apiBase = stored.apiBase;
+    if (!apiBase) {
+      reject(new Error('请先在 Can Rent Lah 工作台登录，插件会自动同步连接信息'));
+      return;
+    }
     chrome.runtime.sendMessage(
       {
         type: 'api-request',

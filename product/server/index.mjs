@@ -19,6 +19,7 @@ import {
   saveListing, getUserListings, deleteListing,
   createTask, getTask, getUserTasks, updateTaskFull,
   getProfile, saveProfile, getLog, appendLog,
+  cleanupExpiredSessions, cleanupExpiredTasks,
 } from './db.mjs';
 import { config, checkConfig } from './config.mjs';
 
@@ -757,7 +758,26 @@ if (!ok) {
   for (const w of warnings) console.warn(w);
 }
 
+// Periodic cleanup — expired sessions + stale tasks
+function runCleanup() {
+  try {
+    const s = cleanupExpiredSessions();
+    const t = cleanupExpiredTasks();
+    if (s > 0 || t > 0) {
+      console.log(`Cleanup: ${s} sessions expired, ${t} tasks expired`);
+    }
+  } catch (err) {
+    logError('cleanup', err);
+  }
+}
+
 server.listen(config.port, () => {
   console.log(`Can Rent Lah running at http://localhost:${config.port}`);
   console.log(`Mode: ${config.nodeEnv}  |  AI: ${config.aiProvider}/${config.aiModel}  |  DB: ${config.dbPath}`);
+
+  // Clean on startup
+  runCleanup();
+
+  // Then every hour
+  setInterval(runCleanup, 60 * 60 * 1000);
 });
