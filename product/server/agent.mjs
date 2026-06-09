@@ -103,13 +103,17 @@ export const SCHOOL_AREA_MAP = {
 // Phase 1: 从用户自然语言中提取/补全需求
 // ---------------------------------------------------------------------------
 
-export async function understandIntent({ message, profile, logSnippet, currentListings = [] }) {
+export async function understandIntent({ message, profile, logSnippet, recentMessages = [], currentListings = [] }) {
   const profileText = profile?.exists
     ? `\n用户已有画像:\n${profile.raw.slice(0, 2000)}`
     : '\n用户尚未创建画像。';
 
   const logText = logSnippet
-    ? `\n最近学习日志（最近几轮交互）:\n${logSnippet.slice(0, 1500)}`
+    ? `\n最近学习日志（压缩记忆）:\n${logSnippet.slice(0, 1500)}`
+    : '';
+
+  const conversationText = recentMessages.length
+    ? `\n最近对话记录（${recentMessages.length}条）:\n${recentMessages.map((m) => `${m.role === 'user' ? '用户' : '助手'}: ${m.content.slice(0, 300)}`).join('\n')}`
     : '';
 
   const listingContext = currentListings.length
@@ -145,6 +149,7 @@ export async function understandIntent({ message, profile, logSnippet, currentLi
   const userContent = [
     profileText,
     logText,
+    conversationText,
     listingContext,
     '',
     message,

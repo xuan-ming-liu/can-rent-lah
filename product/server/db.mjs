@@ -90,6 +90,18 @@ db.exec(`
     used_count  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_email  TEXT NOT NULL REFERENCES users(email),
+    role        TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    summarized  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_messages_user_email ON messages(user_email);
+  CREATE INDEX IF NOT EXISTS idx_messages_summarized ON messages(user_email, summarized);
 `);
 
 // ---------------------------------------------------------------------------
@@ -376,6 +388,56 @@ export function getProfile(email) {
 export function saveProfile(email, content) {
   db.prepare('INSERT OR REPLACE INTO profiles (user_email, content, updated_at) VALUES (?, ?, ?)')
     .run(email, content, new Date().toISOString());
+}
+
+// ---------------------------------------------------------------------------
+// Messages (conversation history)
+// ---------------------------------------------------------------------------
+
+export function saveMessages(email, messages) {
+  const stmt = db.prepare('INSERT INTO messages (user_email, role, content) VALUES (?, ?, ?)');
+  const saveMany = db.transaction((msgs) => {
+    for (const m of msgs) {
+      if (!m.content || !String(m.content).trim()) continue;
+      stmt.run(email, m.role, String(m.content).trim());
+    }
+  });
+  saveMany(messages);
+  return { saved: true };
+}
+
+export function getRecentMessages(email, limit = 20) {
+  const rows = db.prepare(
+    'SELECT role, content, created_at FROM messages WHERE user_email = ? AND summarized = 0 ORDER BY id DESC LIMIT ?'
+  ).all(email, limit);
+  return rows.reverse();
+}
+
+export function getUnsummarizedCount(email) {
+  const row = db.prepare(
+    'SELECT COUNT(*) as cnt FROM messages WHERE user_email = ? AND summarized = 0'
+  ).get(email);
+  return row ? row.cnt : 0;
+}
+
+export function getOldestUnsummarized(email, limit = 20) {
+  return db.prepare(
+    'SELECT role, content FROM messages WHERE user_email = ? AND summarized = 0 ORDER BY id ASC LIMIT ?'
+  ).all(email, limit);
+}
+
+export function markMessagesSummarized(email, oldestCount) {
+  // Mark the oldest N unsummarized messages as summarized
+  const ids = db.prepare(
+    'SELECT id FROM messages WHERE user_email = ? AND summarized = 0 ORDER BY id ASC LIMIT ?'
+  ).all(email, oldestCount);
+  if (!ids.length) return 0;
+  const idList = ids.map((r) => r.id);
+  const placeholders = idList.map(() => '?').join(',');
+  const result = db.prepare(
+    `UPDATE messages SET summarized = 1 WHERE id IN (${placeholders})`
+  ).run(...idList);
+  return result.changes;
 }
 
 // ---------------------------------------------------------------------------

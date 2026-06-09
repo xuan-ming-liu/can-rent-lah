@@ -20,6 +20,7 @@ import {
   createTask, getTask, getUserTasks, updateTaskFull,
   getProfile, saveProfile, getLog, appendLog,
   cleanupExpiredSessions, cleanupExpiredTasks,
+  saveMessages, getRecentMessages, getUnsummarizedCount, getOldestUnsummarized, markMessagesSummarized,
 } from './db.mjs';
 import { config, checkConfig } from './config.mjs';
 
@@ -192,6 +193,39 @@ async function handleApi(req, res, pathname) {
     return;
   }
 
+  // --- Messages (conversation history) ---
+
+  if (pathname === '/api/messages' && req.method === 'GET') {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const url = new URL(req.url || '/', `http://${req.headers.host}`);
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200);
+    const messages = getRecentMessages(user.email, limit);
+    sendJson(res, 200, { messages });
+    return;
+  }
+
+  if (pathname === '/api/messages' && req.method === 'POST') {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const { messages } = await readJson(req);
+    if (!Array.isArray(messages) || !messages.length) {
+      sendJson(res, 400, { error: '请提供消息数组' }); return;
+    }
+    saveMessages(user.email, messages);
+
+    // Auto-summarize if too many unsummarized messages
+    const unsummarized = getUnsummarizedCount(user.email);
+    if (unsummarized > 40) {
+      summarizeInBackground(user.email).catch((err) =>
+        logError('summarize', err)
+      );
+    }
+
+    sendJson(res, 200, { saved: true });
+    return;
+  }
+
   // --- Chat ---
 
   if (pathname === '/api/chat' && req.method === 'POST') {
@@ -251,12 +285,14 @@ async function handleApi(req, res, pathname) {
 
     const profile = getProfile(user.email);
     const logSnippet = getLog(user.email, 80);
+    const recentMessages = getRecentMessages(user.email, 20);
 
     // Phase 1: 理解意图
     const intent = await understandIntent({
       message: String(question).trim(),
       profile,
       logSnippet,
+      recentMessages,
     });
 
     if (intent.action === 'clarify') {
@@ -606,6 +642,38 @@ function generateProfileMarkdown(p) {
 function safeJson(str, fallback = null) {
   if (!str) return fallback;
   try { return JSON.parse(str); } catch { return fallback; }
+}
+
+// ---------------------------------------------------------------------------
+// Background summarization — compress old messages into learning_log
+// ---------------------------------------------------------------------------
+
+async function summarizeInBackground(email) {
+  try {
+    const unsummarized = getUnsummarizedCount(email);
+    if (unsummarized <= 40) return;
+
+    const oldMessages = getOldestUnsummarized(email, 20);
+    if (!oldMessages.length) return;
+
+    const conversationText = oldMessages
+      .map((m) => `${m.role === 'user' ? '用户' : '助手'}: ${m.content.slice(0, 200)}`)
+      .join('\n');
+
+    const { chat } = await import('./agent.mjs');
+    const summary = await chat({
+      system: '你是一个对话摘要工具。把以下对话压缩成2-3句中文摘要，只提炼关键信息：偏好变化、关注区域、预算、特殊要求。不要废话。',
+      messages: [{ role: 'user', content: `对话记录:\n${conversationText}\n\n请压缩成2-3句话:` }],
+      maxTokens: 256,
+    });
+
+    if (summary && !summary.includes('AI request failed')) {
+      appendLog(email, `## 对话摘要 (${new Date().toISOString().slice(0, 10)})\n\n${summary.trim()}`);
+      markMessagesSummarized(email, 20);
+    }
+  } catch (err) {
+    logError('summarizeInBackground', err);
+  }
 }
 
 function toPublicTask(row) {

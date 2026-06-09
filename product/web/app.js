@@ -405,12 +405,36 @@ async function pollTaskStatus(taskId) {
 // Chat / Task Creation
 // ---------------------------------------------------------------------------
 
+async function saveMessagesToServer(userText, assistantText) {
+  if (!state.token) return;
+  try {
+    const msgs = [];
+    if (userText) msgs.push({ role: 'user', content: userText });
+    if (assistantText) msgs.push({ role: 'assistant', content: assistantText });
+    if (msgs.length) {
+      await api('/api/messages', { method: 'POST', body: JSON.stringify({ messages: msgs }) });
+    }
+  } catch {
+    // Silently fail — don't disrupt the user
+  }
+}
+
+async function loadConversationHistory() {
+  if (!state.token) return;
+  try {
+    const data = await api('/api/messages?limit=50');
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+    for (const m of messages) {
+      addMessage(m.role, m.content);
+    }
+  } catch {
+    // No history yet or server error — start fresh
+  }
+}
+
 function buildTaskPrompt(message) {
-  const history = state.conversationLog
-    .slice(-8)
-    .map((entry) => `${entry.role}: ${entry.text}`)
-    .join('\n');
-  return `${history ? `对话历史仅用于理解偏好，不要因为历史关键词自动触发搜索：\n${history}\n---\n` : ''}用户最新消息：${message}\n\n只根据最新消息判断意图。若预算、币种、学校、区域等关键信息不明确，先追问。`;
+  // Server now has full conversation history in DB — just send the raw message
+  return message;
 }
 
 async function handleChatMessage(message) {
@@ -418,7 +442,6 @@ async function handleChatMessage(message) {
   if (!text) return;
   addMessage('user', text);
   chatInput.value = '';
-  state.conversationLog.push({ role: '用户', text });
 
   try {
     const pending = addMessage('system', '⏳ 正在理解需求并创建任务...');
@@ -432,14 +455,15 @@ async function handleChatMessage(message) {
       onComplete: () => pending.remove() });
 
     if (data.needsClarify) {
-      state.conversationLog.push({ role: 'Agent', text: data.question });
       addMessage('assistant', data.question || '还需要补充一点信息。');
+      // Save user message + agent response
+      saveMessagesToServer(text, data.question);
       return;
     }
 
     if (data.answer) {
-      state.conversationLog.push({ role: 'Agent', text: data.answer });
       addMessage('assistant', data.answer);
+      saveMessagesToServer(text, data.answer);
       return;
     }
 
@@ -451,7 +475,9 @@ async function handleChatMessage(message) {
         ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? `&maxprice=${task.intent.maxPrice}` : ''}`
         : 'https://www.propertyguru.com.sg/property-for-rent';
 
-      addMessage('assistant', `任务已创建。\n\n- 搜索策略：${round.strategy || '自动搜索'}\n- 搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n<a class="msg-action" href="${searchUrl}" target="_blank" rel="noreferrer">打开 PropertyGuru 搜索页面</a>\n\n插件会自动翻页采集。不小心关了页面就点上面按钮重新打开。`);
+      const assistantMsg = `任务已创建。\n\n- 搜索策略：${round.strategy || '自动搜索'}\n- 搜索页面：${round.instructionCount || round.instructions?.length || 0} 个\n\n<a class="msg-action" href="${searchUrl}" target="_blank" rel="noreferrer">打开 PropertyGuru 搜索页面</a>\n\n插件会自动翻页采集。不小心关了页面就点上面按钮重新打开。`;
+      addMessage('assistant', assistantMsg);
+      saveMessagesToServer(text, assistantMsg);
       const target = task.intent?.location
         ? `https://www.propertyguru.com.sg/property-for-rent?freetext=${encodeURIComponent(task.intent.location)}${task.intent.maxPrice ? `&maxprice=${task.intent.maxPrice}` : ''}`
         : 'https://www.propertyguru.com.sg/property-for-rent';
@@ -526,7 +552,13 @@ async function bootLoggedIn() {
   showScreen(true);
   fillAccountInfo();
   await refreshListings();
-  addMessage('assistant', '欢迎回来。直接告诉我你的租房需求；如果信息不够，我会先追问再搜索。');
+
+  // Load conversation history first, then add greeting if no history
+  await loadConversationHistory();
+  if (!chatLog.children.length) {
+    addMessage('assistant', '欢迎回来。直接告诉我你的租房需求；如果信息不够，我会先追问再搜索。');
+  }
+
   await loadCompletedTasks();
   await checkActiveTasks();
 }
